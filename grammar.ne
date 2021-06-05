@@ -1,13 +1,23 @@
 @builtin "whitespace.ne"
 @builtin "number.ne"
 
-main -> parameter __ storage __ code _
+main -> parameter _ storage _ code _
 
-parameter -> "parameter" __ type:? (type __):* ";"
+parameter -> "parameter" __ type _ ";" _ comment:* _
 
-storage -> "storage" __ type:? (type __):* ";"
+storage -> "storage" __ type _ ";" _ comment:* _
 
-code -> "code" __ "{" _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}" ";"
+code -> "code" _ comment:* _
+        "{" _ comment:* _
+        comment:* _
+        (instruction _ comment:* _ ";" _ comment:* _):* _ comment:* _
+        comment:* _
+        (instruction _ comment:* _ ";":? _ comment:* _):? _ comment:* _
+        comment:* _
+        "}" _ comment:* _
+        ";" _ comment:* _
+
+comment -> "#" [^\n]:* {% function(d) { return null; } %}
 
 type -> "address"
       | "big_map" __ type __ type
@@ -30,7 +40,7 @@ type -> "address"
       | "operation"
       | "option" __ type
       | "or" __ type __ type
-      | "pair" __ type __ type
+      | "(":? _ "pair" comment:* __ type _ comment:* __ type _ comment:* _ ")":?
       | "sapling_state" __ type
       | "sapling_transaction" __ type
       | "set" __ type
