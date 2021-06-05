@@ -7,7 +7,7 @@ parameter -> "parameter" __ type:? (type __):* ";"
 
 storage -> "storage" __ type:? (type __):* ";"
 
-code -> "code" __ "{" _ ([a-zA-Z_]:+ _ [a-zA-Z_]:*):? ([a-zA-Z_]:+ _ [a-zA-Z_]:* ";" __):* ([a-zA-Z_]:+ _ [a-zA-Z_]:*):? _ "}" ";"
+code -> "code" __ "{" _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}" ";"
 
 type -> "address"
       | "big_map" __ type __ type
@@ -58,8 +58,9 @@ instruction -> "ABS"
              | "CONTRACT" __ type
              | "CREATE_CONTRACT" __ "{" _ "parameter" __ type _ ";" _ "storage" __ type _ ";" _ "code" __ instruction _ "}"
              | "DIG" __ int
-             | "DIP" __ instruction
-             | "DIP" __ int __ instruction
+             | "DIP" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
+             | "DIP" __ int __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
+             | "DROP"
              | "DROP" __ int
              | "DUG" __ int
              | "DUP"
@@ -77,10 +78,10 @@ instruction -> "ABS"
              | "GET_AND_UPDATE"
              | "GT"
              | "HASH_KEY"
-             | "IF" __ instruction __ instruction
+             | "IF" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":? _ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
              | "IF_CONS" __ instruction __ instruction
              | "IF_LEFT" __ instruction __ instruction
-             | "IF_NONE" __ instruction __ instruction
+             | "IF_NONE" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":? _ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
              | "IMPLICIT_ACCOUNT"
              | "INT"
              | "ISNAT"
@@ -111,7 +112,7 @@ instruction -> "ABS"
              | "PAIR"
              | "PAIR" __ int
              | "PAIRING_CHECK"
-             | "PUSH" __ type __ [a-zA-Z_]:+
+             | "PUSH" __ type __ [a-zA-Z0-9_]:+
              | "READ_TICKET"
              | "RIGHT" __ type
              | "SAPLING_EMPTY_STATE" __ type
