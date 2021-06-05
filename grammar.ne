@@ -1,40 +1,40 @@
 @builtin "whitespace.ne"
 
-main -> parameter "\n":+ storage "\n":+ code "\n":+
+main -> parameter __ storage __ code _
 
-parameter -> "parameter " (type " "):+ ";"
+parameter -> "parameter" __ type:? (type __):* ";"
 
-storage -> "storage " (type " "):+ ";"
+storage -> "storage" __ type:? (type __):* ";"
 
-code -> "code " "{" (type " "):+ "}" ";"
+code -> "code" __ "{" _ ([a-zA-Z]:+ type:*):? ([a-zA-Z]:+ type:* ";" __):* ([a-zA-Z]:+ type:*):? _ "}" ";"
 
 type -> "address"
-      | "big_map" " " type " " type
+      | "big_map" __ type __ type
       | "bls12_381_fr"
       | "bls12_381_g1"
       | "bls12_381_g2"
       | "bool"
       | "bytes"
       | "chain_id"
-      | "contract" " " type
+      | "contract" __ type
       | "int"
       | "key"
       | "key_hash"
       | "lambda"
-      | "list" " " type
-      | "map" " " type " " type
+      | "list" __ type
+      | "map" __ type __ type
       | "mutez"
       | "nat"
       | "never"
       | "operation"
-      | "option" " " type
-      | "or" " " type " " type
-      | "pair" " " type " " type
-      | "sapling_state" " " type
-      | "sapling_transaction" " " type
-      | "set" " " type
+      | "option" __ type
+      | "or" __ type __ type
+      | "pair" __ type __ type
+      | "sapling_state" __ type
+      | "sapling_transaction" __ type
+      | "set" __ type
       | "signature"
       | "string"
-      | "ticket" " " type
+      | "ticket" __ type
       | "timestamp"
       | "unit"
