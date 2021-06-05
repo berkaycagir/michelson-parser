@@ -6,7 +6,7 @@ parameter -> "parameter" __ type:? (type __):* ";"
 
 storage -> "storage" __ type:? (type __):* ";"
 
-code -> "code" __ "{" _ ([a-zA-Z]:+ type:*):? ([a-zA-Z]:+ type:* ";" __):* ([a-zA-Z]:+ type:*):? _ "}" ";"
+code -> "code" __ "{" _ ([a-zA-Z_]:+ _ [a-zA-Z_]:*):? ([a-zA-Z_]:+ _ [a-zA-Z_]:* ";" __):* ([a-zA-Z_]:+ _ [a-zA-Z_]:*):? _ "}" ";"
 
 type -> "address"
       | "big_map" __ type __ type
