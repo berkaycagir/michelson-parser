@@ -1,23 +1,16 @@
 @builtin "whitespace.ne"
 @builtin "number.ne"
+@builtin "string.ne"
 
 main -> parameter _ storage _ code _
 
-parameter -> "parameter" __ type _ ";" _ comment:* _
+parameter -> "parameter" __ type _ ";"
 
-storage -> "storage" __ type _ ";" _ comment:* _
+storage -> "storage" __ type _ ";"
 
-code -> "code" _ comment:* _
-        "{" _ comment:* _
-        comment:* _
-        (instruction _ comment:* _ ";" _ comment:* _):* _ comment:* _
-        comment:* _
-        (instruction _ comment:* _ ";":? _ comment:* _):? _ comment:* _
-        comment:* _
-        "}" _ comment:* _
-        ";" _ comment:* _
+code -> "code" _ "{" _ (instruction _ ";" _ ):* "}" _ ";"
 
-comment -> "#" [^\n]:* {% function(d) { return null; } %}
+#comment -> _ "#" [^\n]:* {% function(d) { return null; } %}
 
 type -> "address"
       | "big_map" __ type __ type
@@ -40,7 +33,7 @@ type -> "address"
       | "operation"
       | "option" __ type
       | "or" __ type __ type
-      | "(":? _ "pair" comment:* __ type _ comment:* __ type _ comment:* _ ")":?
+      | "(":? _ "pair" __ type __ type _ ")":?
       | "sapling_state" __ type
       | "sapling_transaction" __ type
       | "set" __ type
@@ -68,8 +61,8 @@ instruction -> "ABS"
              | "CONTRACT" __ type
              | "CREATE_CONTRACT" __ "{" _ "parameter" __ type _ ";" _ "storage" __ type _ ";" _ "code" __ instruction _ "}"
              | "DIG" __ int
-             | "DIP" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
-             | "DIP" __ int __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
+             | "DIP" _ "{" _ instruction _ ";" _ "}"
+             | "DIP" __ int __ "{" _ instruction _ ";" _ "}"
              | "DROP"
              | "DROP" __ int
              | "DUG" __ int
@@ -88,10 +81,14 @@ instruction -> "ABS"
              | "GET_AND_UPDATE"
              | "GT"
              | "HASH_KEY"
-             | "IF" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":? _ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
-             | "IF_CONS" __ instruction __ instruction
-             | "IF_LEFT" __ instruction __ instruction
-             | "IF_NONE" __ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":? _ "{":? _ (instruction _ ";"):? (instruction _ ";" _):* (instruction _ ";":?):? _ "}":?
+             | "IF" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IF_CONS" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IF_LEFT" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IF_NONE" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IF_SOME" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IFCMPGE" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IFCMPGT" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
+             | "IFCMPLT" _ "{" _ (instruction _ ";" _):* _ "}" _ "{" _ (instruction _ ";" _):* _ "}"
              | "IMPLICIT_ACCOUNT"
              | "INT"
              | "ISNAT"
@@ -122,7 +119,7 @@ instruction -> "ABS"
              | "PAIR"
              | "PAIR" __ int
              | "PAIRING_CHECK"
-             | "PUSH" __ type __ [a-zA-Z0-9_]:+
+             | "PUSH" __ pushh
              | "READ_TICKET"
              | "RIGHT" __ type
              | "SAPLING_EMPTY_STATE" __ type
@@ -153,3 +150,7 @@ instruction -> "ABS"
              | "VOTING_POWER"
              | "XOR"
              | "{}"
+
+pushh -> "string" __ dqstring
+      | "string" __ sqstring
+      | type __ [0-9]:+
