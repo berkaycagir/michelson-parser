@@ -27,17 +27,17 @@ code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %
       | %code _ "{};" {% function (d) { return "code {}"; } %}
 
 type -> %comparableType {% keywordToJson %}
-      | %comparableType (_ %annot):+ {% keywordToJson %}
       | %constantType {% keywordToJson %}
-      | %constantType (_ %annot):+ {% keywordToJson %}
-      | %lparen _ %comparableType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %constantType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
       | %singleArgType _ type {% singleArgKeywordToJson %}
       | %lparen _ %singleArgType _ type _ %rparen {% singleArgKeywordWithParenToJson %}
       | %lparen _ %singleArgType _ %lparen _ type _ %rparen _ %rparen {% singleArgKeywordWithParenToJson %}
-      | %lparen _ %singleArgType (_ %annot):+ _ type %rparen {% singleArgTypeKeywordWithParenToJson %}
       | %doubleArgType _ type _ type {% doubleArgKeywordToJson %}
       | %lparen _ %doubleArgType _ type _ type _ %rparen {% doubleArgKeywordWithParenToJson %}
+      | %lparen _ %comparableType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %constantType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %singleArgType (_ %annot):+ _ type %rparen {% singleArgTypeKeywordWithParenToJson %}
+      | %comparableType (_ %annot):+ {% keywordToJson %}
+      | %constantType (_ %annot):+ {% keywordToJson %}
       | %lparen _ %doubleArgType (_ %annot):+ _ type _ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 typeData -> %singleArgType _ typeData {% singleArgKeywordToJson %}
