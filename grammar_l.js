@@ -3,28 +3,6 @@
 (function () {
 function id(x) { return x[0]; }
 
-// Bypasses TS6133. Allow declared but unused functions.
-// @ts-ignore
-function nth(n) {
-    return function(d) {
-        return d[n];
-    };
-}
-
-
-// Bypasses TS6133. Allow declared but unused functions.
-// @ts-ignore
-function $(o) {
-    return function(d) {
-        var ret = {};
-        Object.keys(o).forEach(function(k) {
-            ret[k] = d[o[k]];
-        });
-        return ret;
-    };
-}
-
-
 const moo = require("moo");
 
 const macroCADRconst = /C[AD]+R/;
@@ -43,7 +21,7 @@ const lexer = moo.compile({
     rparen: ')',
     lbrace: '{',
     rbrace: '}',
-    ws: /[ \t]+/,
+    ws: {match: /[ \s]+/, lineBreaks: true},
     semicolon: ";",
     number: /-?[0-9]+/,
     parameter: ['parameter', 'Parameter'],

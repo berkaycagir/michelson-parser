@@ -1,5 +1,4 @@
 @builtin "whitespace.ne"
-@builtin "postprocessors.ne"
 @lexer lexer
 
 main -> instruction {% id %}
@@ -148,7 +147,7 @@ const lexer = moo.compile({
     rparen: ')',
     lbrace: '{',
     rbrace: '}',
-    ws: /[ \t]+/,
+    ws: {match: /[ \s]+/, lineBreaks: true},
     semicolon: ";",
     number: /-?[0-9]+/,
     parameter: ['parameter', 'Parameter'],
