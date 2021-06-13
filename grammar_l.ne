@@ -15,16 +15,16 @@ main -> instruction {% id %}
 
 script -> parameter _ storage _ code {% scriptToJson %}
 
-parameterValue -> %parameter _ typeData _ semicolons {% singleArgKeywordToJson %}
-
-storageValue -> %storage _ typeData _ semicolons {% singleArgKeywordToJson %}
-
 parameter -> %parameter _ type _ semicolons {% singleArgKeywordToJson %}
 
 storage -> %storage _ type _ semicolons {% singleArgKeywordToJson %}
 
 code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
       | %code _ "{};" {% function (d) { return "code {}"; } %}
+
+parameterValue -> %parameter _ typeData _ semicolons {% singleArgKeywordToJson %}
+
+storageValue -> %storage _ typeData _ semicolons {% singleArgKeywordToJson %}
 
 type -> %comparableType {% keywordToJson %}
       | %constantType {% keywordToJson %}
