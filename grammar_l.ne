@@ -143,6 +143,7 @@ const macroCMPlist = ['CMPEQ', 'CMPNEQ', 'CMPLT', 'CMPGT', 'CMPLE', 'CMPGE'];
 const macroIFlist = ['IFEQ', 'IFNEQ', 'IFLT', 'IFGT', 'IFLE', 'IFGE'];
 const lexer = moo.compile({
     annot: /[\@\%\:][a-z_A-Z0-9]+/,
+    comment: /#.*/,
     lparen: '(',
     rparen: ')',
     lbrace: '{',
