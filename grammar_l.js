@@ -209,13 +209,16 @@ const check_other = word => (word == "UNPAIR" || word == "UNPAPAIR"); // TODO: d
 const expand_other = (word, annot) => {
     if (word == 'UNPAIR') {
         if (annot == null) {
-            return '[ [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ] ]';
+            // return '[ [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ] ]';
+            return '[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ {"prim": "CDR" } ] } ]';
         }
         else if (annot.length == 1) {
-            return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ]  } ] ]`;
+            // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ]  } ] ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] } ]`;
         }
         else if (annot.length == 2) {
-            return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [${annot[1]}] } ] ]  } ] ]`;
+            // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [${annot[1]}] } ] ]  } ] ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ { "prim": "CDR", "annots": [${annot[1]}] } ] } ]`;
         }
         else {
             return '';
@@ -223,16 +226,18 @@ const expand_other = (word, annot) => {
     }
     if (word == 'UNPAPAIR') {
         if (annot == null) {
-            return `[ [ { "prim": "DUP" },
-                            { "prim": "CAR" },
-                            { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
-                            {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]]}]]]}]`;
+            // return `[ [ { "prim": "DUP" },
+            //                { "prim": "CAR" },
+            //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
+            //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]]}]]]}]`;
+            return `[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[{"prim":"CDR"}]},{"prim":"DIP","args":[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[{"prim":"CDR"}]}]}]`;
         }
         else {
-            return `[ [ { "prim": "DUP" },
-                            { "prim": "CAR" },
-                            { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
-                            {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]],"annots": [${annot}]}]]]}]`;
+            // return `[ [ { "prim": "DUP" },
+            //                { "prim": "CAR" },
+            //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
+            //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]],"annots": [${annot}]}]]]}]`;
+            return `[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[{"prim":"CDR"}]},{"prim":"DIP","args":[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[{"prim":"CDR"}],"annots":[${annot}]}]}]`;
         }
     }
 };
@@ -438,7 +443,8 @@ const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nest
 /**
  * parameter, storage, code
  */
-const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
+//const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
+const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ ${d[4]} ] } ]`;
 const doubleArgTypeKeywordToJson = d => {
     const annot = d[1].map(x => `"${x[1]}"`);
     return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [${annot}]  }`;
@@ -461,7 +467,8 @@ const pushWithAnnotsToJson = d => {
 const dipnToJson = d => (d.length > 4) ? `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" }, [ ${d[4]} ] ] }` : `{ "prim": "${d[0]}", "args": [ ${d[2]} ] }`;
 const dignToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ] }`;
 const dropnToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ] }`;
-const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ [ ${d[8]} ] ] } ] ] }`;
+// const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ [ ${d[8]} ] ] } ] ] }`;
+const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ] }`;
 const instructionListToJson = d => {
     const instructionOne = [d[2]];
     const instructionList = d[3].map(x => x[3]);
