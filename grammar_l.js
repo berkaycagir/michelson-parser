@@ -325,12 +325,12 @@ const expandKeyword = (word, annot) => {
  * Given a int, convert it to JSON.
  * Example: "3" -> { "int": "3" }
  */
-const intToJson = d => `{ "int": "${parseInt(d[0])}" }`;
+const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": ${findLine(d)} }`;
 /**
  * Given a string, convert it to JSON.
  * Example: "string" -> "{ "string": "blah" }"
  */
-const stringToJson = d => `{ "string": ${d[0]} }`;
+const stringToJson = d => `{ "string": ${d[0]}, "line": ${findLine(d)} }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"
@@ -342,7 +342,7 @@ const keywordToJson = d => {
             return [expandKeyword(word, null)];
         }
         else {
-            return `{ "prim": "${d[0]}" }`;
+            return `{ "prim": "${d[0]}", "line": ${findLine(d)} }`;
         }
     }
     else {
@@ -351,7 +351,7 @@ const keywordToJson = d => {
             return [expandKeyword(word, annot)];
         }
         else {
-            return `{ "prim": "${d[0]}", "annots": [${annot}] }`;
+            return `{ "prim": "${d[0]}", "annots": [${annot}], "line": ${findLine(d)} }`;
         }
     }
 };
@@ -359,10 +359,10 @@ const keywordToJson = d => {
  * Given a keyword with one argument, convert it to JSON.
  * Example: "option int" -> "{ prim: option, args: [int] }"
  */
-const singleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]} ] }`;
+const singleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": ${findLine(d)} }`;
 const comparableTypeToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[2]}", "annots": [${annot}]  }`;
+    return `{ "prim": "${d[2]}", "annots": [${annot}], "line": ${findLine(d)} }`;
 };
 const singleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
@@ -392,37 +392,37 @@ const singleArgTypeKeywordToJson = d => {
  * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
  * Also: (option (mutez))
  */
-const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[(4 + ((d.length === 7) ? 0 : 2))]} ] }`;
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[(4 + ((d.length === 7) ? 0 : 2))]} ], "line": ${findLine(d)} }`;
 /**
  * Given a keyword with two arguments, convert it into JSON.
  * Example: "Pair unit instruction" -> "{ prim: Pair, args: [{prim: unit}, {prim: instruction}] }"
  */
-const doubleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]} ] }`;
-const doubleArgParenKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[8]} ] }`;
+const doubleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]} ], "line": ${findLine(d)} }`;
+const doubleArgParenKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[8]} ], "line": ${findLine(d)} }`;
 const doubleArgInstrKeywordToJson = d => {
     const word = `${d[0].toString()}`;
     if (check_if(word)) {
         return expandIF(word, d[2], d[4]);
     }
     else {
-        return `{ "prim": "${d[0]}", "args": [ [${d[2]}], [${d[4]}] ] }`;
+        return `{ "prim": "${d[0]}", "args": [ [${d[2]}], [${d[4]}] ], "line": ${findLine(d)} }`;
     }
 };
 /**
  * Given a keyword with two arguments and parentheses, convert it into JSON.
  * Example: "(Pair unit instruction)" -> "{ prim: Pair, args: [{prim: unit}, {prim: instruction}] }"
  */
-const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]}, ${d[6]} ] }`;
+const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]}, ${d[6]} ], "line": ${findLine(d)} }`;
 /**
  * Given a keyword with three arguments, convert it into JSON.
  * Example: "LAMBDA key unit {DIP;}" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
  */
-const tripleArgKeyWordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, [${d[6]}] ] }`;
+const tripleArgKeyWordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, [${d[6]}] ], "line": ${findLine(d)} }`;
 /**
  * Given a keyword with three arguments and parentheses, convert it into JSON.
  * Example: "(LAMBDA key unit {DIP;})" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
  */
-const tripleArgKeyWordWithParenToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, ${d[6]} ] }`;
+const tripleArgKeyWordWithParenToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, ${d[6]} ], "line": ${findLine(d)} }`;
 const nestedArrayChecker = x => {
     if (Array.isArray(x) && Array.isArray(x[0])) { // handles double array nesting
         return x[0];
@@ -447,7 +447,7 @@ const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nest
 const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ ${d[4]} ] } ]`;
 const doubleArgTypeKeywordToJson = d => {
     const annot = d[1].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [${annot}]  }`;
+    return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [${annot}], "line": ${findLine(d)} }`;
 };
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
@@ -468,11 +468,30 @@ const dipnToJson = d => (d.length > 4) ? `{ "prim": "${d[0]}", "args": [ { "int"
 const dignToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ] }`;
 const dropnToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ] }`;
 // const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ [ ${d[8]} ] ] } ] ] }`;
-const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ] }`;
+const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ], "line": ${findLine(d)} }`;
 const instructionListToJson = d => {
     const instructionOne = [d[2]];
     const instructionList = d[3].map(x => x[3]);
     return instructionOne.concat(instructionList).map(x => nestedArrayChecker(x));
+};
+
+const findLine = d => {
+  const lineNums = new Set();
+  for (const i of d) {
+    if (i != null && i.hasOwnProperty('line')) {
+      lineNums.add(i.line);
+    };
+  };
+  if (lineNums.size > 1) {
+    var output = "[ ";
+    for (const i of lineNums) {
+      output = output.concat(i).concat(", ");
+    }
+    output = output.substring(0, output.length - 2).concat(" ]");
+    return output;
+  } else {
+    return lineNums.values().next().value;
+  };
 };
 var grammar = {
     Lexer: lexer,
