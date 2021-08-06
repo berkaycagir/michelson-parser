@@ -1,16 +1,17 @@
 @builtin "whitespace.ne"
 @lexer lexer
 
-main -> instruction {% id %}
-      | data {% id %}
-      | type {% id %}
-      | parameter {% id %}
-      | storage {% id %}
-      | code {% id %}
-      | script {% id %}
-      | parameterValue {% id %}
-      | storageValue {% id %}
-      | typeData {% id %}
+main -> script {% id %}
+#main -> instruction {% id %}
+#      | data {% id %}
+#      | type {% id %}
+#      | parameter {% id %}
+#      | storage {% id %}
+#      | code {% id %}
+#      | script {% id %}
+#      | parameterValue {% id %}
+#      | storageValue {% id %}
+#      | typeData {% id %}
 
 script -> parameter _ storage _ code {% scriptToJson %}
 
@@ -21,9 +22,9 @@ storage -> %storage _ type _ semicolons {% singleArgKeywordToJson %}
 code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
       | %code _ "{};" {% function (d) { return "code {}"; } %}
 
-parameterValue -> %parameter _ typeData _ semicolons {% singleArgKeywordToJson %}
+#parameterValue -> %parameter _ typeData _ semicolons {% singleArgKeywordToJson %}
 
-storageValue -> %storage _ typeData _ semicolons {% singleArgKeywordToJson %}
+#storageValue -> %storage _ typeData _ semicolons {% singleArgKeywordToJson %}
 
 type -> %comparableType {% keywordToJson %}
       | %constantType {% keywordToJson %}
@@ -39,15 +40,15 @@ type -> %comparableType {% keywordToJson %}
       | %constantType (_ %annot):+ {% keywordToJson %}
       | %lparen _ %doubleArgType (_ %annot):+ _ type _ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
-typeData -> %singleArgType _ typeData {% singleArgKeywordToJson %}
-          | %lparen _ %singleArgType _ typeData _ %rparen {% singleArgKeywordWithParenToJson %}
-          | %doubleArgType _ typeData _ typeData {% doubleArgKeywordToJson %}
-          | %lparen _ %doubleArgType _ typeData _ typeData _ %rparen {% doubleArgKeywordWithParenToJson %}
-          | subTypeData {% id %}
-          | subTypeElt {% id %}
-          | %number {% intToJson %}
-          | %string {% stringToJson %}
-          | %lbrace _ %rbrace {% function(d) { return []; } %}
+#typeData -> %singleArgType _ typeData {% singleArgKeywordToJson %}
+#          | %lparen _ %singleArgType _ typeData _ %rparen {% singleArgKeywordWithParenToJson %}
+#          | %doubleArgType _ typeData _ typeData {% doubleArgKeywordToJson %}
+#          | %lparen _ %doubleArgType _ typeData _ typeData _ %rparen {% doubleArgKeywordWithParenToJson %}
+#          | subTypeData {% id %}
+#          | subTypeElt {% id %}
+#          | %number {% intToJson %}
+#          | %string {% stringToJson %}
+#          | %lbrace _ %rbrace {% function(d) { return []; } %}
 
 data -> %constantData {% keywordToJson %}
       | %singleArgData _ data {% singleArgKeywordToJson %}
@@ -59,17 +60,17 @@ data -> %constantData {% keywordToJson %}
       | %number {% intToJson %}
       | %string {% stringToJson %}
 
-subTypeData -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-             | "{" _ (data ";":? _):+ "}" {% instructionSetToJsonSemi %}
-             | "(" _ (data ";":? _):+ ")" {% instructionSetToJsonSemi %}
+#subTypeData -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+#             | "{" _ (data ";":? _):+ "}" {% instructionSetToJsonSemi %}
+#             | "(" _ (data ";":? _):+ ")" {% instructionSetToJsonSemi %}
 
-subTypeElt -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-            | "{" _ (typeElt ";":? _):+ "}" {% instructionSetToJsonSemi %}
-            | "(" _ (typeElt ";":? _):+ ")" {% instructionSetToJsonSemi %}
-            | "{" _ (typeElt _ ";":? _):+ "}" {% instructionSetToJsonSemi %}
-            | "(" _ (typeElt _ ";":? _):+ ")" {% instructionSetToJsonSemi %}
+#subTypeElt -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+#            | "{" _ (typeElt ";":? _):+ "}" {% instructionSetToJsonSemi %}
+#            | "(" _ (typeElt ";":? _):+ ")" {% instructionSetToJsonSemi %}
+#            | "{" _ (typeElt _ ";":? _):+ "}" {% instructionSetToJsonSemi %}
+#            | "(" _ (typeElt _ ";":? _):+ ")" {% instructionSetToJsonSemi %}
 
-typeElt -> %elt _ typeData _ typeData {% doubleArgKeywordToJson %}
+#typeElt -> %elt _ typeData _ typeData {% doubleArgKeywordToJson %}
 
 subInstruction -> %lbrace _ %rbrace {% function(d) { return ""; } %}
                 | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
