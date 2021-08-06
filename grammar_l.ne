@@ -101,11 +101,11 @@ instruction -> instructions {% keywordToJson %}
              | "PUSH" _ type _ data {% doubleArgKeywordToJson %}
              | "PUSH" _ type _ %lbrace %rbrace {% pushToJson %}
              | "PUSH" (_ %annot):+ _ type _ data {% pushWithAnnotsToJson %}
-             | "DIP" _ [0-9]:+ _ subInstruction {% dipnToJson %}
-             | "DUP" _ [0-9]:+ _ subInstruction {% dipnToJson %}
-             | "DIG" _ [0-9]:+ {% dignToJson %}
-             | "DUG" _ [0-9]:+ {% dignToJson %}
-             | "DROP" _ [0-9]:+ {% dropnToJson %}
+             | "DIP" _ %number _ subInstruction {% dipnToJson %}
+             | "DUP" _ %number _ subInstruction {% dipnToJson %}
+             | "DIG" _ %number {% dignToJson %}
+             | "DUG" _ %number {% dignToJson %}
+             | "DROP" _ %number {% dropnToJson %}
              | "DROP" {% keywordToJson %}
              | %lbrace _ %rbrace {% function(d) { return ""; } %}
              | "CREATE_CONTRACT" _ %lbrace _ parameter _ storage _ code _ %rbrace {% subContractToJson %}
@@ -138,7 +138,11 @@ const macroDIPconst = /DII+P/;
 const macroDUPconst = /DUU+P/;
 const DIPmatcher = new RegExp(macroDIPconst);
 const DUPmatcher = new RegExp(macroDUPconst);
-const macroASSERTlistConst = ['ASSERT', 'ASSERT_EQ', 'ASSERT_NEQ', 'ASSERT_GT', 'ASSERT_LT', 'ASSERT_GE', 'ASSERT_LE', 'ASSERT_NONE', 'ASSERT_SOME', 'ASSERT_LEFT', 'ASSERT_RIGHT', 'ASSERT_CMPEQ', 'ASSERT_CMPNEQ', 'ASSERT_CMPGT', 'ASSERT_CMPLT', 'ASSERT_CMPGE', 'ASSERT_CMPLE'];
+const macroASSERTlistConst = ['ASSERT', 'ASSERT_EQ', 'ASSERT_NEQ', 'ASSERT_GT',
+                              'ASSERT_LT', 'ASSERT_GE', 'ASSERT_LE', 'ASSERT_NONE',
+                              'ASSERT_SOME', 'ASSERT_LEFT', 'ASSERT_RIGHT', 'ASSERT_CMPEQ',
+                              'ASSERT_CMPNEQ', 'ASSERT_CMPGT', 'ASSERT_CMPLT', 'ASSERT_CMPGE',
+                              'ASSERT_CMPLE'];
 const macroIFCMPlist = ['IFCMPEQ', 'IFCMPNEQ', 'IFCMPLT', 'IFCMPGT', 'IFCMPLE', 'IFCMPGE'];
 const macroCMPlist = ['CMPEQ', 'CMPNEQ', 'CMPLT', 'CMPGT', 'CMPLE', 'CMPGE'];
 const macroIFlist = ['IFEQ', 'IFNEQ', 'IFLT', 'IFGT', 'IFLE', 'IFGE'];

@@ -11,7 +11,11 @@ const macroDIPconst = /DII+P/;
 const macroDUPconst = /DUU+P/;
 const DIPmatcher = new RegExp(macroDIPconst);
 const DUPmatcher = new RegExp(macroDUPconst);
-const macroASSERTlistConst = ['ASSERT', 'ASSERT_EQ', 'ASSERT_NEQ', 'ASSERT_GT', 'ASSERT_LT', 'ASSERT_GE', 'ASSERT_LE', 'ASSERT_NONE', 'ASSERT_SOME', 'ASSERT_LEFT', 'ASSERT_RIGHT', 'ASSERT_CMPEQ', 'ASSERT_CMPNEQ', 'ASSERT_CMPGT', 'ASSERT_CMPLT', 'ASSERT_CMPGE', 'ASSERT_CMPLE'];
+const macroASSERTlistConst = ['ASSERT', 'ASSERT_EQ', 'ASSERT_NEQ', 'ASSERT_GT',
+                              'ASSERT_LT', 'ASSERT_GE', 'ASSERT_LE', 'ASSERT_NONE',
+                              'ASSERT_SOME', 'ASSERT_LEFT', 'ASSERT_RIGHT', 'ASSERT_CMPEQ',
+                              'ASSERT_CMPNEQ', 'ASSERT_CMPGT', 'ASSERT_CMPLT', 'ASSERT_CMPGE',
+                              'ASSERT_CMPLE'];
 const macroIFCMPlist = ['IFCMPEQ', 'IFCMPNEQ', 'IFCMPLT', 'IFCMPGT', 'IFCMPLE', 'IFCMPGE'];
 const macroCMPlist = ['CMPEQ', 'CMPNEQ', 'CMPLT', 'CMPGT', 'CMPLE', 'CMPGE'];
 const macroIFlist = ['IFEQ', 'IFNEQ', 'IFLT', 'IFGT', 'IFLE', 'IFGE'];
@@ -635,21 +639,11 @@ var grammar = {
     {"name": "instruction$ebnf$8$subexpression$2", "symbols": ["_", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "instruction$ebnf$8", "symbols": ["instruction$ebnf$8", "instruction$ebnf$8$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "instruction", "symbols": [{"literal":"PUSH"}, "instruction$ebnf$8", "_", "type", "_", "data"], "postprocess": pushWithAnnotsToJson},
-    {"name": "instruction$ebnf$9", "symbols": [/[0-9]/]},
-    {"name": "instruction$ebnf$9", "symbols": ["instruction$ebnf$9", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": [{"literal":"DIP"}, "_", "instruction$ebnf$9", "_", "subInstruction"], "postprocess": dipnToJson},
-    {"name": "instruction$ebnf$10", "symbols": [/[0-9]/]},
-    {"name": "instruction$ebnf$10", "symbols": ["instruction$ebnf$10", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": [{"literal":"DUP"}, "_", "instruction$ebnf$10", "_", "subInstruction"], "postprocess": dipnToJson},
-    {"name": "instruction$ebnf$11", "symbols": [/[0-9]/]},
-    {"name": "instruction$ebnf$11", "symbols": ["instruction$ebnf$11", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": [{"literal":"DIG"}, "_", "instruction$ebnf$11"], "postprocess": dignToJson},
-    {"name": "instruction$ebnf$12", "symbols": [/[0-9]/]},
-    {"name": "instruction$ebnf$12", "symbols": ["instruction$ebnf$12", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": [{"literal":"DUG"}, "_", "instruction$ebnf$12"], "postprocess": dignToJson},
-    {"name": "instruction$ebnf$13", "symbols": [/[0-9]/]},
-    {"name": "instruction$ebnf$13", "symbols": ["instruction$ebnf$13", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": [{"literal":"DROP"}, "_", "instruction$ebnf$13"], "postprocess": dropnToJson},
+    {"name": "instruction", "symbols": [{"literal":"DIP"}, "_", (lexer.has("number") ? {type: "number"} : number), "_", "subInstruction"], "postprocess": dipnToJson},
+    {"name": "instruction", "symbols": [{"literal":"DUP"}, "_", (lexer.has("number") ? {type: "number"} : number), "_", "subInstruction"], "postprocess": dipnToJson},
+    {"name": "instruction", "symbols": [{"literal":"DIG"}, "_", (lexer.has("number") ? {type: "number"} : number)], "postprocess": dignToJson},
+    {"name": "instruction", "symbols": [{"literal":"DUG"}, "_", (lexer.has("number") ? {type: "number"} : number)], "postprocess": dignToJson},
+    {"name": "instruction", "symbols": [{"literal":"DROP"}, "_", (lexer.has("number") ? {type: "number"} : number)], "postprocess": dropnToJson},
     {"name": "instruction", "symbols": [{"literal":"DROP"}], "postprocess": keywordToJson},
     {"name": "instruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return ""; }},
     {"name": "instruction", "symbols": [{"literal":"CREATE_CONTRACT"}, "_", (lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "parameter", "_", "storage", "_", "code", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": subContractToJson},
