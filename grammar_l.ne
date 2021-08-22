@@ -15,9 +15,9 @@ main -> script {% id %}
 
 script -> parameter _ storage _ code {% scriptToJson %}
 
-parameter -> %parameter _ type _ semicolons {% singleArgKeywordToJson %}
+parameter -> %parameter (_ %annot):* _ type _ semicolons {% singleArgKeywordToJson %}
 
-storage -> %storage _ type _ semicolons {% singleArgKeywordToJson %}
+storage -> %storage (_ %annot):* _ type _ semicolons {% singleArgKeywordToJson %}
 
 code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
       | %code _ "{};" {% function (d) { return "code {}"; } %}
@@ -84,8 +84,9 @@ instructions -> %baseInstruction {% id %}
               | %macroSETCADR {% id %}
               | %macroASSERTlist {% id %}
 
-instruction -> instructions {% keywordToJson %}
-             | instructions (_ %annot):+ _ {% keywordToJson %}
+#instruction -> instructions {% keywordToJson %}
+#             | instructions (_ %annot):+ _ {% keywordToJson %}
+instruction -> instructions (_ %annot):* _ {% keywordToJson %}
              | instructions _ subInstruction {% singleArgInstrKeywordToJson %}
              | instructions (_ %annot):+ _ subInstruction {% singleArgTypeKeywordToJson %}
              | instructions _ type {% singleArgKeywordToJson %}
@@ -465,6 +466,7 @@ const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"
+ * DOESN'T WORK!
  */
 const keywordToJson = d => {
     const word = d[0].toString();
@@ -475,8 +477,7 @@ const keywordToJson = d => {
         else {
             return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
         }
-    }
-    else {
+    } else {
         const annot = d[1].map(x => `"${x[1]}"`);
         if (checkKeyword(word)) {
             return [expandKeyword(word, annot, d)];
@@ -489,6 +490,7 @@ const keywordToJson = d => {
 /**
  * Given a keyword with one argument, convert it to JSON.
  * Example: "option int" -> "{ prim: option, args: [int] }"
+ * DOESN'T WORK!
  */
 const singleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
 const comparableTypeToJson = d => {
