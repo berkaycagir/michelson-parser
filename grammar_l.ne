@@ -26,8 +26,8 @@ code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %
 
 #storageValue -> %storage _ typeData _ semicolons {% singleArgKeywordToJson %}
 
-type -> %comparableType {% keywordToJson %}
-      | %constantType {% keywordToJson %}
+type -> %comparableType (_ %annot):* {% keywordToJson %}
+      | %constantType (_ %annot):* {% keywordToJson %}
       | %singleArgType _ type {% singleArgKeywordToJson %}
       | %lparen _ %singleArgType _ type _ %rparen {% singleArgKeywordWithParenToJson %}
       | %lparen _ %singleArgType _ %lparen _ type _ %rparen _ %rparen {% singleArgKeywordWithParenToJson %}
@@ -36,8 +36,6 @@ type -> %comparableType {% keywordToJson %}
       | %lparen _ %comparableType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
       | %lparen _ %constantType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
       | %lparen _ %singleArgType (_ %annot):+ _ type %rparen {% singleArgTypeKeywordWithParenToJson %}
-      | %comparableType (_ %annot):+ {% keywordToJson %}
-      | %constantType (_ %annot):+ {% keywordToJson %}
       | %lparen _ %doubleArgType (_ %annot):+ _ type _ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 #typeData -> %singleArgType _ typeData {% singleArgKeywordToJson %}
@@ -84,9 +82,9 @@ instructions -> %baseInstruction {% id %}
               | %macroSETCADR {% id %}
               | %macroASSERTlist {% id %}
 
-instruction -> instructions {% keywordToJson %}
-             | instructions (_ %annot):+ _ {% keywordToJson %}
-#instruction -> instructions (_ %annot):* _ {% keywordToJson %}
+#instruction -> instructions {% keywordToJson %}
+#             | instructions (_ %annot):+ _ {% keywordToJson %}
+instruction -> instructions (_ %annot):* _ {% keywordToJson %}
              | instructions _ subInstruction {% singleArgInstrKeywordToJson %}
              | instructions (_ %annot):+ _ subInstruction {% singleArgTypeKeywordToJson %}
              | instructions _ type {% singleArgKeywordToJson %}
@@ -466,7 +464,6 @@ const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"
- * DOESN'T WORK!
  */
 const keywordToJson = d => {
     const word = d[0].toString();
@@ -478,12 +475,21 @@ const keywordToJson = d => {
             return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
         }
     } else {
-        const annot = d[1].map(x => `"${x[1]}"`);
-        if (checkKeyword(word)) {
-            return [expandKeyword(word, annot, d)];
-        }
-        else {
-            return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            if (checkKeyword(word)) {
+                return [expandKeyword(word, annot, d)];
+            }
+            else {
+                return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            }
+        } else {
+            if (checkKeyword(word)) {
+                return [expandKeyword(word, null, d)];
+            }
+            else {
+                return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
+            }
         }
     }
 };
