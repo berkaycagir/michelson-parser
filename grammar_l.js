@@ -355,16 +355,26 @@ const keywordToJson = d => {
             return [expandKeyword(word, annot, d)];
         }
         else {
-            return `{ "prim": "${d[0]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
         }
     }
 };
 /**
  * Given a keyword with one argument, convert it to JSON.
  * Example: "option int" -> "{ prim: option, args: [int] }"
- * DOESN'T WORK!
  */
-const singleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordToJson = d => {
+    if (d.length > 3) {
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
+        }
+    } else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+    }
+};
 const comparableTypeToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
     return `{ "prim": "${d[2]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
@@ -597,9 +607,11 @@ var grammar = {
     {"name": "instructions", "symbols": [(lexer.has("macroDUP") ? {type: "macroDUP"} : macroDUP)], "postprocess": id},
     {"name": "instructions", "symbols": [(lexer.has("macroSETCADR") ? {type: "macroSETCADR"} : macroSETCADR)], "postprocess": id},
     {"name": "instructions", "symbols": [(lexer.has("macroASSERTlist") ? {type: "macroASSERTlist"} : macroASSERTlist)], "postprocess": id},
-    {"name": "instruction$ebnf$1", "symbols": []},
+    {"name": "instruction", "symbols": ["instructions"], "postprocess": keywordToJson},
     {"name": "instruction$ebnf$1$subexpression$1", "symbols": ["_", (lexer.has("annot") ? {type: "annot"} : annot)]},
-    {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1", "instruction$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1$subexpression$1"]},
+    {"name": "instruction$ebnf$1$subexpression$2", "symbols": ["_", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1", "instruction$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$1", "_"], "postprocess": keywordToJson},
     {"name": "instruction", "symbols": ["instructions", "_", "subInstruction"], "postprocess": singleArgInstrKeywordToJson},
     {"name": "instruction$ebnf$2$subexpression$1", "symbols": ["_", (lexer.has("annot") ? {type: "annot"} : annot)]},

@@ -84,9 +84,9 @@ instructions -> %baseInstruction {% id %}
               | %macroSETCADR {% id %}
               | %macroASSERTlist {% id %}
 
-#instruction -> instructions {% keywordToJson %}
-#             | instructions (_ %annot):+ _ {% keywordToJson %}
-instruction -> instructions (_ %annot):* _ {% keywordToJson %}
+instruction -> instructions {% keywordToJson %}
+             | instructions (_ %annot):+ _ {% keywordToJson %}
+#instruction -> instructions (_ %annot):* _ {% keywordToJson %}
              | instructions _ subInstruction {% singleArgInstrKeywordToJson %}
              | instructions (_ %annot):+ _ subInstruction {% singleArgTypeKeywordToJson %}
              | instructions _ type {% singleArgKeywordToJson %}
@@ -483,16 +483,26 @@ const keywordToJson = d => {
             return [expandKeyword(word, annot, d)];
         }
         else {
-            return `{ "prim": "${d[0]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
         }
     }
 };
 /**
  * Given a keyword with one argument, convert it to JSON.
  * Example: "option int" -> "{ prim: option, args: [int] }"
- * DOESN'T WORK!
  */
-const singleArgKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordToJson = d => {
+    if (d.length > 3) {
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
+        }
+    } else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+    }
+};
 const comparableTypeToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
     return `{ "prim": "${d[2]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
