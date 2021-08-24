@@ -564,13 +564,6 @@ const findLine = d => {
 var grammar = {
     Lexer: lexer,
     ParserRules: [
-    {"name": "_$ebnf$1", "symbols": []},
-    {"name": "_$ebnf$1", "symbols": ["_$ebnf$1", "wschar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "_", "symbols": ["_$ebnf$1"], "postprocess": function(d) {return null;}},
-    {"name": "__$ebnf$1", "symbols": ["wschar"]},
-    {"name": "__$ebnf$1", "symbols": ["__$ebnf$1", "wschar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "__", "symbols": ["__$ebnf$1"], "postprocess": function(d) {return null;}},
-    {"name": "wschar", "symbols": [/[ \t\n\v\f]/], "postprocess": id},
     {"name": "main", "symbols": ["script"], "postprocess": id},
     {"name": "script", "symbols": ["parameter", "_", "storage", "_", "code"], "postprocess": scriptToJson},
     {"name": "parameter$ebnf$1", "symbols": []},
@@ -731,7 +724,10 @@ var grammar = {
     {"name": "elt", "symbols": [(lexer.has("elt") ? {type: "elt"} : elt), "_", "data", "_", "data"], "postprocess": doubleArgKeywordToJson},
     {"name": "semicolons$ebnf$1", "symbols": [/[;]/], "postprocess": id},
     {"name": "semicolons$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "semicolons", "symbols": ["semicolons$ebnf$1"]}
+    {"name": "semicolons", "symbols": ["semicolons$ebnf$1"]},
+    {"name": "_$ebnf$1", "symbols": []},
+    {"name": "_$ebnf$1", "symbols": ["_$ebnf$1", (lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "_", "symbols": ["_$ebnf$1"], "postprocess": function(d) {return null;}}
 ]
   , ParserStart: "main"
 }

@@ -1,4 +1,4 @@
-@builtin "whitespace.ne"
+#@builtin "whitespace.ne"
 @lexer lexer
 
 main -> script {% id %}
@@ -88,6 +88,8 @@ subElt -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
 elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
 semicolons -> [;]:?
+
+_  -> %ws:* {% function(d) {return null;} %}
 
 @{%
 /*jshint esversion: 6 */
