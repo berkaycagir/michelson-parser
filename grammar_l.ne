@@ -35,8 +35,8 @@ data -> %constantData {% keywordToJson %}
 
 subInstruction -> %lbrace _ %rbrace {% function(d) { return ""; } %}
                 | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-                | %lbrace _ (instruction %ws:? %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
-                | %lbrace _ (instruction %ws:? %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+                | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
+                | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
 
 instructions -> %baseInstruction {% id %}
               | %macroCADR {% id %}
