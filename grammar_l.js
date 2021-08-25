@@ -711,13 +711,13 @@ var grammar = {
     {"name": "_$subexpression$1$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": id},
     {"name": "_$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "_$subexpression$1", "symbols": ["_$subexpression$1$ebnf$1"]},
-    {"name": "_", "symbols": ["_$subexpression$1"]},
+    {"name": "_", "symbols": ["_$subexpression$1"], "postprocess": function(d) {return null;}},
     {"name": "_$subexpression$2$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": id},
     {"name": "_$subexpression$2$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "_$subexpression$2", "symbols": ["_$subexpression$2$ebnf$1", (lexer.has("comment") ? {type: "comment"} : comment), "_"]},
     {"name": "_", "symbols": ["_$subexpression$2"], "postprocess": function(d) {return null;}},
     {"name": "__$subexpression$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
-    {"name": "__", "symbols": ["__$subexpression$1"]},
+    {"name": "__", "symbols": ["__$subexpression$1"], "postprocess": function(d) {return null;}},
     {"name": "__$subexpression$2", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws), (lexer.has("comment") ? {type: "comment"} : comment), "__"]},
     {"name": "__", "symbols": ["__$subexpression$2"], "postprocess": function(d) {return null;}}
 ]
