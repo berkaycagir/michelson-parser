@@ -1,16 +1,13 @@
-#@builtin "whitespace.ne"
 @lexer lexer
 
-main -> script {% id %}
-
-script -> parameter _ storage _ code {% scriptToJson %}
+main -> parameter _ storage _ code {% scriptToJson %}
 
 parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 storage -> %storage (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
-      | %code _ "{};" {% function (d) { return "code {}"; } %}
+      | %code _ %lbrace _ %rbrace _ %semicolon {% function (d) { return "code {}"; } %}
 
 type -> %comparableType (__ %annot):* {% keywordToJson %}
       | %constantType (__ %annot):* {% keywordToJson %}
@@ -20,8 +17,8 @@ type -> %comparableType (__ %annot):* {% keywordToJson %}
       | %lparen _ %doubleArgType __ type __ type _ %rparen {% doubleArgKeywordWithParenToJson %}
       | %lparen _ %comparableType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
       | %lparen _ %constantType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %singleArgType (__ %annot):+ __ type %rparen {% singleArgTypeKeywordWithParenToJson %}
-      | %lparen _ %doubleArgType (__ %annot):+ __ type __ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
+      | %lparen _ %singleArgType (__ %annot):+ __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
+      | %lparen _ %doubleArgType (__ %annot):+ __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 data -> %constantData {% keywordToJson %}
       | %singleArgData __ data {% singleArgKeywordToJson %}
