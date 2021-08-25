@@ -89,8 +89,8 @@ elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
 semicolons -> %semicolon:? {% function(d) {return null;} %}
 
-_  -> (%ws:?) | (%ws:? %comment %ws) _ {% function(d) {return null;} %}
-__ -> (%ws) | (%ws %comment %ws:?) {% function(d) {return null;} %}
+_  -> (%ws:?) | (%ws:? %comment _) {% function(d) {return null;} %}
+__ -> (%ws)   | (%ws   %comment __) {% function(d) {return null;} %}
 
 @{%
 /*jshint esversion: 6 */
