@@ -35,8 +35,8 @@ data -> %constantData {% keywordToJson %}
 
 subInstruction -> %lbrace _ %rbrace {% function(d) { return ""; } %}
                 | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-                | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
-                | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+                | %lbrace _ (instruction %ws:? %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
+                | %lbrace _ (instruction %ws:? %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
 
 instructions -> %baseInstruction {% id %}
               | %macroCADR {% id %}
@@ -87,9 +87,10 @@ subElt -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
 
 elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
-semicolons -> [;]:?
+semicolons -> %semicolon:? {% function(d) {return null;} %}
 
-_  -> %ws:* {% function(d) {return null;} %}
+_  -> (%ws:?) | (%ws:? %comment %ws) _ {% function(d) {return null;} %}
+__ -> (%ws) | (%ws %comment %ws:?) {% function(d) {return null;} %}
 
 @{%
 /*jshint esversion: 6 */
@@ -111,12 +112,12 @@ const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
 const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
 const lexer = moo.compile({
     annot: /[\@\%\:][a-z_A-Z0-9]+/,
-    comment: /#.*/,
+    comment: /\#.*/,
     lparen: "(",
     rparen: ")",
     lbrace: "{",
     rbrace: "}",
-    ws: {match: /[ \s]+/, lineBreaks: true},
+    ws: {match: /\s+/, lineBreaks: true},
     semicolon: ";",
     number: /-?[0-9]+/,
     parameter: ["parameter", "Parameter"],
