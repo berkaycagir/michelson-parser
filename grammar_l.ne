@@ -5,29 +5,29 @@ main -> script {% id %}
 
 script -> parameter _ storage _ code {% scriptToJson %}
 
-parameter -> %parameter (_ %annot):* _ type _ semicolons {% singleArgKeywordToJson %}
+parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
-storage -> %storage (_ %annot):* _ type _ semicolons {% singleArgKeywordToJson %}
+storage -> %storage (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 code -> %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
       | %code _ "{};" {% function (d) { return "code {}"; } %}
 
-type -> %comparableType (_ %annot):* {% keywordToJson %}
-      | %constantType (_ %annot):* {% keywordToJson %}
-      | %singleArgType _ type {% singleArgKeywordToJson %}
-      | %lparen _ %singleArgType _ (type | %lparen _ type _ %rparen) _ %rparen {% singleArgKeywordWithParenToJson %}
-      | %doubleArgType _ type _ type {% doubleArgKeywordToJson %}
-      | %lparen _ %doubleArgType _ type _ type _ %rparen {% doubleArgKeywordWithParenToJson %}
-      | %lparen _ %comparableType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %constantType (_ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %singleArgType (_ %annot):+ _ type %rparen {% singleArgTypeKeywordWithParenToJson %}
-      | %lparen _ %doubleArgType (_ %annot):+ _ type _ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
+type -> %comparableType (__ %annot):* {% keywordToJson %}
+      | %constantType (__ %annot):* {% keywordToJson %}
+      | %singleArgType __ type {% singleArgKeywordToJson %}
+      | %lparen _ %singleArgType __ (type | %lparen _ type _ %rparen) _ %rparen {% singleArgKeywordWithParenToJson %}
+      | %doubleArgType __ type __ type {% doubleArgKeywordToJson %}
+      | %lparen _ %doubleArgType __ type __ type _ %rparen {% doubleArgKeywordWithParenToJson %}
+      | %lparen _ %comparableType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %constantType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %singleArgType (__ %annot):+ __ type %rparen {% singleArgTypeKeywordWithParenToJson %}
+      | %lparen _ %doubleArgType (__ %annot):+ __ type __ type %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 data -> %constantData {% keywordToJson %}
-      | %singleArgData _ data {% singleArgKeywordToJson %}
-      | %lparen _ %singleArgData _ (data) _ %rparen {% singleArgKeywordWithParenToJson %}
-      | %doubleArgData _ data _ data {% doubleArgKeywordToJson %}
-      | %lparen _ %doubleArgData _ data _ data _ %rparen {% doubleArgKeywordWithParenToJson %}
+      | %singleArgData __ data {% singleArgKeywordToJson %}
+      | %lparen _ %singleArgData __ (data) _ %rparen {% singleArgKeywordWithParenToJson %}
+      | %doubleArgData __ data __ data {% doubleArgKeywordToJson %}
+      | %lparen _ %doubleArgData __ data __ data _ %rparen {% doubleArgKeywordWithParenToJson %}
       | subData  {% id %}
       | subElt {% id %}
       | %number {% intToJson %}
@@ -46,44 +46,44 @@ instructions -> %baseInstruction {% id %}
               | %macroASSERTlist {% id %}
 
              # bare instruction
-instruction -> instructions (_ %annot):* _ {% keywordToJson %}
+instruction -> instructions (__ %annot):* _ {% keywordToJson %}
              # instruction w/ subinstruction
-             | instructions (_ %annot):* _ subInstruction {% singleArgInstrKeywordToJson %}
+             | instructions (__ %annot):* __ subInstruction {% singleArgInstrKeywordToJson %}
              # instruction w/ type
-             | instructions (_ %annot):* _ type {% singleArgKeywordToJson %}
+             | instructions (__ %annot):* __ type {% singleArgKeywordToJson %}
              # instruction w/ data
-             | instructions (_ %annot):* _ data {% singleArgKeywordToJson %}
+             | instructions (__ %annot):* __ data {% singleArgKeywordToJson %}
              # instruction w/ 2*types & a subinstruction
-             | instructions (_ %annot):* _ type _ type _ subInstruction {% tripleArgKeyWordToJson %}
+             | instructions (__ %annot):* __ type __ type _ subInstruction {% tripleArgKeyWordToJson %}
              # instruction w/ 2*subinstructions
              | instructions (_ %annot):* _ subInstruction _ subInstruction {% doubleArgInstrKeywordToJson %}
              # instruction w/ 2*types
-             | instructions (_ %annot):* _ type _ type {% doubleArgKeywordToJson %}
+             | instructions (_ %annot):* __ type __ type {% doubleArgKeywordToJson %}
              # PUSH
-             | "PUSH" (_ %annot):* _ type _ data {% doubleArgKeywordToJson %}
-             | "PUSH" _ type _ %lbrace _ %rbrace {% pushToJson %}
+             | "PUSH" (__ %annot):* __ type __ data {% doubleArgKeywordToJson %}
+             | "PUSH" __ type _ %lbrace _ %rbrace {% pushToJson %}
              # DIP & DUP
-             | ("DIP" | "DUP") _ %number _ subInstruction {% dipnToJson %}
+             | ("DIP" | "DUP") __ %number _ subInstruction {% dipnToJson %}
              # DIG & DUG
-             | ("DIG" | "DUG") _ %number {% dignToJson %}
+             | ("DIG" | "DUG") __ %number {% dignToJson %}
              # DROP
-             | "DROP" _ %number {% dropnToJson %}
+             | "DROP" __ %number {% dropnToJson %}
              | "DROP" {% keywordToJson %}
              # empty?
              | %lbrace _ %rbrace {% function(d) { return ""; } %}
              # CREATE_CONTRACT
-             | "CREATE_CONTRACT" _ %lbrace _ parameter _ storage _ code _ %rbrace {% subContractToJson %}
+             | "CREATE_CONTRACT" __ %lbrace _ parameter _ storage _ code _ %rbrace {% subContractToJson %}
              # EMPTY_MAP
-             | "EMPTY_MAP" _ type _ type {% doubleArgKeywordToJson %}
+             | "EMPTY_MAP" __ type __ type {% doubleArgKeywordToJson %}
              | "EMPTY_MAP" _ %lparen _ type _ %rparen _ type {% doubleArgParenKeywordToJson %}
 
 subData -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-         | "{" _ (data _ ";":? _):+ "}" {% instructionSetToJsonSemi %}
-         | "(" _ (data _ ";":? _):+ ")" {% instructionSetToJsonSemi %}
+         | %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+         | %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 subElt -> %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-        | "{" _ (elt ";":? _):+ "}" {% instructionSetToJsonSemi %}
-        | "(" _ (elt ";":? _):+ ")" {% instructionSetToJsonSemi %}
+        | %lbrace _ (elt _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+        | %lparen _ (elt _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
