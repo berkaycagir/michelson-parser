@@ -43,9 +43,9 @@ instructions -> %baseInstruction {% id %}
               | %macroASSERTlist {% id %}
 
              # bare instruction
-instruction -> instructions (__ %annot):* _ {% keywordToJson %}
+instruction -> instructions (__ %annot):* {% keywordToJson %}
              # instruction w/ subinstruction
-             | instructions (__ %annot):* __ subInstruction {% singleArgInstrKeywordToJson %}
+             | instructions (__ %annot):* _ subInstruction {% singleArgInstrKeywordToJson %}
              # instruction w/ type
              | instructions (__ %annot):* __ type {% singleArgKeywordToJson %}
              # instruction w/ data
