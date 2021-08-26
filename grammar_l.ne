@@ -40,9 +40,9 @@ instruction ->
               # instruction w/ 2*types & a subinstruction
               | instructions (__ %annot):* __ type __ type _ subInstruction {% tripleArgKeyWordToJson %}
               # instruction w/ 2*subinstructions
-              | instructions (_ %annot):* _ subInstruction _ subInstruction {% doubleArgInstrKeywordToJson %}
+              | instructions (__ %annot):* _ subInstruction _ subInstruction {% doubleArgInstrKeywordToJson %}
               # instruction w/ 2*types
-              | instructions (_ %annot):* __ type __ type {% doubleArgKeywordToJson %}
+              | instructions (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
               # PUSH
               | "PUSH" (__ %annot):* __ type __ data {% doubleArgKeywordToJson %}
               | "PUSH" __ type _ %lbrace _ %rbrace {% pushToJson %}
