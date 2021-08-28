@@ -1,6 +1,6 @@
 @lexer lexer
 
-main -> parameter _ storage _ code {% scriptToJson %}
+main -> _ parameter _ storage _ code {% scriptToJson %}
 
 parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
@@ -121,7 +121,8 @@ const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
 const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
 const lexer = moo.compile({
     annot: /[\@\%\:][a-z_A-Z0-9]+/,
-    comment: /\#.*/,
+    // comment: /\#.*/,
+    comment: /(?:\#.*)|(?:\/\*[\s\S]*\*\/)/,
     lparen: "(",
     rparen: ")",
     lbrace: "{",
@@ -608,7 +609,7 @@ const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nest
  * parameter, storage, code
  */
 //const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
-const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ ${d[4]} ] } ]`;
+const scriptToJson = d => `[ ${d[1]}, ${d[3]}, { "prim": "code", "args": [ ${d[5]} ] } ]`;
 
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);

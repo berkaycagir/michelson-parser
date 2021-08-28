@@ -22,7 +22,8 @@ const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
 const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
 const lexer = moo.compile({
     annot: /[\@\%\:][a-z_A-Z0-9]+/,
-    comment: /\#.*/,
+    // comment: /\#.*/,
+    comment: /(?:\#.*)|(?:\/\*[\s\S]*\*\/)/,
     lparen: "(",
     rparen: ")",
     lbrace: "{",
@@ -509,7 +510,7 @@ const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nest
  * parameter, storage, code
  */
 //const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
-const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ ${d[4]} ] } ]`;
+const scriptToJson = d => `[ ${d[1]}, ${d[3]}, { "prim": "code", "args": [ ${d[5]} ] } ]`;
 
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
@@ -564,7 +565,7 @@ const findLine = d => {
 var grammar = {
     Lexer: lexer,
     ParserRules: [
-    {"name": "main", "symbols": ["parameter", "_", "storage", "_", "code"], "postprocess": scriptToJson},
+    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code"], "postprocess": scriptToJson},
     {"name": "parameter$ebnf$1", "symbols": []},
     {"name": "parameter$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "parameter$ebnf$1", "symbols": ["parameter$ebnf$1", "parameter$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
