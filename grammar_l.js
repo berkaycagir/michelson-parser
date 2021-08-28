@@ -565,7 +565,7 @@ const findLine = d => {
 var grammar = {
     Lexer: lexer,
     ParserRules: [
-    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code"], "postprocess": scriptToJson},
+    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code", "_"], "postprocess": scriptToJson},
     {"name": "parameter$ebnf$1", "symbols": []},
     {"name": "parameter$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "parameter$ebnf$1", "symbols": ["parameter$ebnf$1", "parameter$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
@@ -574,7 +574,7 @@ var grammar = {
     {"name": "storage$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "storage$ebnf$1", "symbols": ["storage$ebnf$1", "storage$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "storage", "symbols": [(lexer.has("storage") ? {type: "storage"} : storage), "storage$ebnf$1", "__", "type", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": singleArgKeywordToJson},
-    {"name": "code", "symbols": [(lexer.has("code") ? {type: "code"} : code), "_", "subInstruction", "_", "semicolons", "_"], "postprocess": function (d) { return d[2]; }},
+    {"name": "code", "symbols": [(lexer.has("code") ? {type: "code"} : code), "_", "subInstruction", "_", "semicolons"], "postprocess": function (d) { return d[2]; }},
     {"name": "code", "symbols": [(lexer.has("code") ? {type: "code"} : code), "_", (lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace), "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": function (d) { return "code {}"; }},
     {"name": "type$ebnf$1", "symbols": []},
     {"name": "type$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},

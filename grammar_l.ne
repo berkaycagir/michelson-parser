@@ -1,13 +1,13 @@
 @lexer lexer
 
-main -> _ parameter _ storage _ code {% scriptToJson %}
+main -> _ parameter _ storage _ code _ {% scriptToJson %}
 
 parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 storage -> %storage (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 code ->
-        %code _ subInstruction _ semicolons _ {% function (d) { return d[2]; } %}
+        %code _ subInstruction _ semicolons {% function (d) { return d[2]; } %}
       | %code _ %lbrace _ %rbrace _ %semicolon {% function (d) { return "code {}"; } %}
 
 type ->
