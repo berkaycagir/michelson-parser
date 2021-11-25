@@ -22,11 +22,17 @@ type ->
       | %lparen _ %singleArgType (__ %annot):+ __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
       | %lparen _ %doubleArgType (__ %annot):+ __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
+
 subInstruction ->
                 %lbrace _ %rbrace {% function(d) { return ""; } %}
               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
               | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
               | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+               # cases with nested {}
+              | %lbrace _ subInstruction _ semicolons _ %rbrace {% function(d) { return d[2]; } %}
+              | %lbrace _ subInstruction _ semicolons _ instruction _ %rbrace {% function(d) { return d[2].concat(d[6]); } %}
+              | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return "TODO!"; } %}
+              | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return "TODO!!"; } %}
 
 instruction ->
               # bare instruction
