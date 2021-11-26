@@ -23,16 +23,22 @@ type ->
       | %lparen _ %doubleArgType (__ %annot):+ __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 
+# subInstruction ->
+#                 %lbrace _ %rbrace {% function(d) { return ""; } %}
+#               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
+#               | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return instructionSetToJsonNoSemi(d, false); } %}
+#               | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return instructionSetToJsonSemi(d, false); } %}
+#                # cases with nested {}
+#               | %lbrace _ subInstruction _ semicolons _ %rbrace {% function(d) { return d[2]; } %}
+#               | %lbrace _ subInstruction _ semicolons _ instruction _ %rbrace {% function(d) { return d[2].concat(d[6]); } %}
+#               | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return instructionSetToJsonNoSemi(d, true); } %}
+#               | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return instructionSetToJsonSemi(d, true); } %}
+
 subInstruction ->
                 %lbrace _ %rbrace {% function(d) { return ""; } %}
               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-              | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% instructionSetToJsonNoSemi %}
-              | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
-               # cases with nested {}
-              | %lbrace _ subInstruction _ semicolons _ %rbrace {% function(d) { return d[2]; } %}
-              | %lbrace _ subInstruction _ semicolons _ instruction _ %rbrace {% function(d) { return d[2].concat(d[6]); } %}
-              | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return "TODO!"; } %}
-              | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return "TODO!!"; } %}
+              | %lbrace _ (subInstruction _ semicolons _):? (instruction _ %semicolon _):+ (subInstruction _ semicolons _):? %rbrace {% function(d) { return "TODO!!"; } %} # TODO
+              | %lbrace _ (subInstruction _ semicolons _):? (instruction _ %semicolon _):+ (subInstruction _ semicolons _):? instruction _ %rbrace {% function(d) { return "TODO!!!"; } %} # TODO
 
 instruction ->
               # bare instruction
@@ -609,8 +615,28 @@ const nestedArrayChecker = x => {
  * '{ prim: NIL, args: [{ prim: operation }] }',
  * '{ prim: PAIR }' ]
  */
-const instructionSetToJsonNoSemi = d => { return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x)); };
-const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nestedArrayChecker(x)); };
+const instructionSetToJsonNoSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x));
+        } catch (e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonNoSemi(d[2], false).concat(d[6].map(x => x[0]).concat(d[7]).map(x => nestedArrayChecker(x)));
+    }
+};
+const instructionSetToJsonSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).map(x => nestedArrayChecker(x));
+        } catch(e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonSemi(d[2], false).concat(d[6].map(x => x[0]).map(x => nestedArrayChecker(x)));
+    }
+};
 /**
  * parameter, storage, code
  */

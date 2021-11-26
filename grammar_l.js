@@ -504,8 +504,28 @@ const nestedArrayChecker = x => {
  * '{ prim: NIL, args: [{ prim: operation }] }',
  * '{ prim: PAIR }' ]
  */
-const instructionSetToJsonNoSemi = d => { return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x)); };
-const instructionSetToJsonSemi = d => { return d[2].map(x => x[0]).map(x => nestedArrayChecker(x)); };
+const instructionSetToJsonNoSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x));
+        } catch (e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonNoSemi(d[2], false).concat(d[6].map(x => x[0]).concat(d[7]).map(x => nestedArrayChecker(x)));
+    }
+};
+const instructionSetToJsonSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).map(x => nestedArrayChecker(x));
+        } catch(e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonSemi(d[2], false).concat(d[6].map(x => x[0]).map(x => nestedArrayChecker(x)));
+    }
+};
 /**
  * parameter, storage, code
  */
@@ -612,28 +632,28 @@ var grammar = {
     {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("doubleArgType") ? {type: "doubleArgType"} : doubleArgType), "type$ebnf$6", "__", "type", "__", "type", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": doubleArgTypeKeywordWithParenToJson},
     {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return ""; }},
     {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return d[2]; }},
-    {"name": "subInstruction$ebnf$1$subexpression$1", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$1"]},
-    {"name": "subInstruction$ebnf$1$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$1", "symbols": ["subInstruction$ebnf$1", "subInstruction$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$1", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": instructionSetToJsonNoSemi},
+    {"name": "subInstruction$ebnf$1$subexpression$1", "symbols": ["subInstruction", "_", "semicolons", "_"]},
+    {"name": "subInstruction$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
     {"name": "subInstruction$ebnf$2$subexpression$1", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subInstruction$ebnf$2", "symbols": ["subInstruction$ebnf$2$subexpression$1"]},
     {"name": "subInstruction$ebnf$2$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subInstruction$ebnf$2", "symbols": ["subInstruction$ebnf$2", "subInstruction$ebnf$2$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$2", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": instructionSetToJsonSemi},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction", "_", "semicolons", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return d[2]; }},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction", "_", "semicolons", "_", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return d[2].concat(d[6]); }},
-    {"name": "subInstruction$ebnf$3$subexpression$1", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$3", "symbols": ["subInstruction$ebnf$3$subexpression$1"]},
-    {"name": "subInstruction$ebnf$3$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$3", "symbols": ["subInstruction$ebnf$3", "subInstruction$ebnf$3$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction", "_", "semicolons", "_", "subInstruction$ebnf$3", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!"; }},
-    {"name": "subInstruction$ebnf$4$subexpression$1", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$4", "symbols": ["subInstruction$ebnf$4$subexpression$1"]},
-    {"name": "subInstruction$ebnf$4$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subInstruction$ebnf$4", "symbols": ["subInstruction$ebnf$4", "subInstruction$ebnf$4$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction", "_", "semicolons", "_", "subInstruction$ebnf$4", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!!"; }},
+    {"name": "subInstruction$ebnf$3$subexpression$1", "symbols": ["subInstruction", "_", "semicolons", "_"]},
+    {"name": "subInstruction$ebnf$3", "symbols": ["subInstruction$ebnf$3$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$3", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$1", "subInstruction$ebnf$2", "subInstruction$ebnf$3", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!!"; }},
+    {"name": "subInstruction$ebnf$4$subexpression$1", "symbols": ["subInstruction", "_", "semicolons", "_"]},
+    {"name": "subInstruction$ebnf$4", "symbols": ["subInstruction$ebnf$4$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$4", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction$ebnf$5$subexpression$1", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$5", "symbols": ["subInstruction$ebnf$5$subexpression$1"]},
+    {"name": "subInstruction$ebnf$5$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$5", "symbols": ["subInstruction$ebnf$5", "subInstruction$ebnf$5$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subInstruction$ebnf$6$subexpression$1", "symbols": ["subInstruction", "_", "semicolons", "_"]},
+    {"name": "subInstruction$ebnf$6", "symbols": ["subInstruction$ebnf$6$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$6", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$4", "subInstruction$ebnf$5", "subInstruction$ebnf$6", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!!!"; }},
     {"name": "instruction$ebnf$1", "symbols": []},
     {"name": "instruction$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1", "instruction$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
