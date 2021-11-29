@@ -2,6 +2,7 @@
 
 import os, subprocess, ast, sys
 
+multiples = []
 errors = []
 
 for file in os.listdir("test"):
@@ -13,7 +14,7 @@ for file in os.listdir("test"):
         print("execution resulted in error. ✖ stderr below:")
         print(execution.stderr.decode("utf-8"))
     elif len(ast.literal_eval(execution.stdout.decode("utf-8"))) == 0 or len(ast.literal_eval(execution.stdout.decode("utf-8"))) > 1:
-        errors.append(file)
+        multiples.append(file)
         print("execution resulted in multiple parsings. ✖ Results below:")
         print(execution.stdout.decode("utf-8"))
     elif len(ast.literal_eval(execution.stdout.decode("utf-8"))) == 1:
@@ -23,9 +24,12 @@ for file in os.listdir("test"):
         print("unknown error with this file. ✖")
     print()
 
-if len(errors) > 0:
-    print("Problematic files:")
+if len(errors) > 0 or len(multiples) > 0:
+    print("Errors:")
     print(sorted(errors))
-    sys.exit(1)
+    print()
+    print("Multiple parsings:")
+    print(sorted(multiples))
+    sys.exit(len(errors))
 else:
     sys.exit()
