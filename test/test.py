@@ -5,7 +5,7 @@ import os, subprocess, ast
 for file in os.listdir("test"):
     print("• Testing file {}... ".format(file), end="")
     content = subprocess.run(['cat', "test/" + file], check=True, capture_output=True)
-    execution = subprocess.run(["nearley-test", "../grammar_l.js", "-q"], input=content.stdout, capture_output=True)
+    execution = subprocess.run(["nearley-test", "grammar_l.js", "-q"], input=content.stdout, capture_output=True)
     if execution.returncode != 0:
         print("execution resulted in error. ✖ stderr below:")
         print(execution.stderr.decode("utf-8"))
