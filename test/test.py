@@ -25,7 +25,7 @@ for file in os.listdir("test"):
 
 if len(errors) > 0:
     print("Problematic files:")
-    print(errors)
+    print(sorted(errors))
     sys.exit(1)
 else:
     sys.exit()
