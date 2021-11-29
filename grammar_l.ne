@@ -35,8 +35,8 @@ type ->
 #               | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return instructionSetToJsonSemi(d, true); } %}
 
 subInstruction ->
-                %lbrace _ %rbrace {% function(d) { return ""; } %}
-              | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
+#                %lbrace _ %rbrace {% function(d) { return ""; } %}
+                %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? %rbrace {% function(d) { return "TODO!!"; } %} # TODO
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? instruction _ %rbrace {% function(d) { return "TODO!!!"; } %} # TODO
 

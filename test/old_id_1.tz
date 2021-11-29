@@ -1,0 +1,18 @@
+parameter (pair address address);
+storage string;
+code {UNPAIR; 
+      UNPAIR;
+      CONTRACT unit;
+      IF_SOME {} { FAILWITH; }; 
+      PUSH mutez 5;
+      UNIT;
+      TRANSFER_TOKENS;
+      NIL operation; SWAP; CONS;
+      SWAP;
+      CONTRACT unit;
+      IF_SOME {} { FAILWITH; }; 
+      PUSH mutez 10;
+      UNIT;
+      TRANSFER_TOKENS; 
+      CONS;
+      PAIR};

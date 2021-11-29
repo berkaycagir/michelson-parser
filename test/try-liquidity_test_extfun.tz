@@ -1,0 +1,13 @@
+parameter %default int;
+storage unit;
+code { DUP ;
+       DIP { CDR @storage_slash_1 } ;
+       CAR @parameter_slash_2 ;
+       DUP @parameter ;
+       DIP 2 { DUP @storage } ;
+       DIG 2 ;
+       DIP 2 { DROP 2 } ;
+       PAIR ;
+       CAR @x ;
+       NIL operation ;
+       PAIR };

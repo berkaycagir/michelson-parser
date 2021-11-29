@@ -1,0 +1,12 @@
+parameter string;
+storage string;
+code { DUP;
+       CDR;
+       SWAP;
+       CAR;
+       CONCAT;
+       PUSH string "Hello ";
+       CONCAT;
+       NIL operation;
+       PAIR;
+     };

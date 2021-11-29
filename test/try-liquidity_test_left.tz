@@ -1,0 +1,93 @@
+parameter %default bool;
+storage int;
+code { DUP ;
+       DIP { CDR @storage_slash_1 } ;
+       CAR @parameter_slash_2 ;
+       LAMBDA @mk_t__2_
+         (pair bool (option int))
+         (pair :t (bool %x) (option %y int))
+         { RENAME @_x_y_slash_3 ;
+           DUP ;
+           CDR @y ;
+           DIP { DUP } ;
+           DIP 2 { DROP } ;
+           SWAP ;
+           CAR @x ;
+           PAIR %x %y } ;
+       LAMBDA @mk_t
+         (pair bool int)
+         (pair :t (bool %x) (int %y))
+         { RENAME @_x_y_slash_7 ;
+           DUP ;
+           CDR @y ;
+           DIP { DUP } ;
+           DIP 2 { DROP } ;
+           SWAP ;
+           CAR @x ;
+           PAIR %x %y } ;
+       DUP @mk_t ;
+       PUSH int 99 ;
+       DIP 4 { DUP @parameter } ;
+       DIG 4 ;
+       PAIR ;
+       EXEC @w ;
+       CAR %x ;
+       NOT ;
+       IF { UNIT ; FAILWITH } { UNIT } ;
+       DROP ;
+       DIP { DUP @mk_t__2_ } ;
+       SWAP ;
+       PUSH (pair bool (option int)) (Pair False (Some 0)) ;
+       EXEC @v ;
+       CAR %x ;
+       IF { UNIT ; FAILWITH } { UNIT } ;
+       DROP ;
+       PUSH @a (or int unit) (Left 3) ;
+       RIGHT @b int ;
+       IF_LEFT
+         { RENAME @x_slash_15 }
+         { RENAME @r_slash_16 ;
+           DUP @r ;
+           IF_LEFT
+             { RENAME @x_slash_17 }
+             { RENAME @__slash_18 ;
+               DIP 5 { DUP @storage } ;
+               DIG 5 ;
+               DIP { DROP } } ;
+           DIP { DROP } } ;
+       RENAME @storage ;
+       DUP @storage ;
+       LEFT @c unit ;
+       IF_LEFT { DROP ; UNIT } { RENAME @__slash_22 ; UNIT ; FAILWITH } ;
+       DROP ;
+       PUSH @x (or :u (int %A) (or (unit %B) (unit %C))) (Left 0) ;
+       IF_LEFT
+         { RENAME @a_slash_24 ;
+           PUSH int 0 ;
+           DIP { DUP @a } ;
+           SWAP ;
+           COMPARE ;
+           NEQ ;
+           IF { UNIT ; FAILWITH } { UNIT } ;
+           DIP { DROP } }
+         { DROP ; UNIT ; FAILWITH } ;
+       DROP ;
+       PUSH @z nat 0 ;
+       RIGHT % %C mutez ;
+       RIGHT @x % %_ unit ;
+       IF_LEFT
+         { DROP ; UNIT ; FAILWITH }
+         { IF_LEFT
+             { RENAME @a_slash_27 ;
+               PUSH mutez 0 ;
+               DIP { DUP @a } ;
+               SWAP ;
+               COMPARE ;
+               NEQ ;
+               IF { UNIT ; FAILWITH } { UNIT } ;
+               DIP { DROP } }
+             { DROP ; UNIT ; FAILWITH } } ;
+       DROP ;
+       DIP { DROP 4 } ;
+       NIL operation ;
+       PAIR };

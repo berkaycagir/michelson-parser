@@ -1,0 +1,774 @@
+parameter
+  (or (or :wallet_operation %revoke
+         (pair :transaction %Withdraw (address %destination) (mutez %amount))
+         (or (pair %ChangeOwner address address)
+             (or (address %AddOwner) (or (address %RemoveOwner) (nat %ChangeRequirement)))))
+      (or (pair %changeOwner address address)
+          (or (address %addOwner)
+              (or (address %removeOwner)
+                  (or (nat %changeRequirement)
+                      (or (unit %deposit)
+                          (pair :transaction %withdraw (address %destination) (mutez %amount))))))));
+storage
+  (pair :storage
+     (nat %m_required)
+     (pair (nat %m_num_owners)
+           (pair (set %m_owners address)
+                 (map %m_pending
+                    bytes
+                    (pair :pending_state (nat %yetNeeded) (set %ownersDone address))))));
+code { DUP ;
+       DIP { CDR @storage_slash_1 } ;
+       CAR @parameter_slash_2 ;
+       LAMBDA @is_owner
+         (pair address
+               (pair :storage
+                  (nat %m_required)
+                  (pair (nat %m_num_owners)
+                        (pair (set %m_owners address)
+                              (map %m_pending
+                                 bytes
+                                 (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+         bool
+         { RENAME @_addr_storage_slash_4 ;
+           DUP ;
+           CDR @storage ;
+           { CDR ; CDR ; CAR %m_owners } ;
+           DIP { DUP } ;
+           DIP 2 { DROP } ;
+           SWAP ;
+           CAR @addr ;
+           MEM } ;
+       LAMBDA
+         (pair (pair (or :wallet_operation
+                        (pair :transaction %Withdraw (address %destination) (mutez %amount))
+                        (or (pair %ChangeOwner address address)
+                            (or (address %AddOwner) (or (address %RemoveOwner) (nat %ChangeRequirement)))))
+                     (pair :storage
+                        (nat %m_required)
+                        (pair (nat %m_num_owners)
+                              (pair (set %m_owners address)
+                                    (map %m_pending
+                                       bytes
+                                       (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+               (lambda
+                  (pair address
+                        (pair :storage
+                           (nat %m_required)
+                           (pair (nat %m_num_owners)
+                                 (pair (set %m_owners address)
+                                       (map %m_pending
+                                          bytes
+                                          (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+                  bool))
+         (or :check_result
+            (pair :storage %Confirmations_Needed
+               (nat %m_required)
+               (pair (nat %m_num_owners)
+                     (pair (set %m_owners address)
+                           (map %m_pending
+                              bytes
+                              (pair :pending_state (nat %yetNeeded) (set %ownersDone address))))))
+            (pair :storage %Execute
+               (nat %m_required)
+               (pair (nat %m_num_owners)
+                     (pair (set %m_owners address)
+                           (map %m_pending
+                              bytes
+                              (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+         { RENAME @_op_storage__is_owner_slash_13 ;
+           DUP ;
+           CAR ;
+           CDR @storage ;
+           SOURCE @owner ;
+           DIP 2 { DUP } ;
+           DIG 2 ;
+           CDR @is_owner_slash_7 ;
+           DIP 2 { DUP @storage } ;
+           DIG 2 ;
+           DIP 2 { DUP @owner } ;
+           DIG 2 ;
+           PAIR ;
+           EXEC ;
+           NOT ;
+           IF { UNIT ; FAILWITH } { UNIT } ;
+           DROP ;
+           DIP 2 { DUP } ;
+           DIG 2 ;
+           CAR ;
+           CAR @op ;
+           PACK @op_bytes ;
+           DIP 2 { DUP @storage } ;
+           DIG 2 ;
+           { CDR ; CDR ; CDR %m_pending } ;
+           DIP { DUP @op_bytes } ;
+           SWAP ;
+           GET ;
+           IF_NONE
+             { PUSH (set address) {} ;
+               DIP 3 { DUP @storage } ;
+               DIG 3 ;
+               CAR %m_required ;
+               PAIR %yetNeeded %ownersDone }
+             {} ;
+           RENAME @pending ;
+           DUP @pending ;
+           CDR %ownersDone ;
+           DIP 3 { DUP @owner } ;
+           DIG 3 ;
+           MEM ;
+           IF { UNIT ; FAILWITH } { UNIT } ;
+           DROP ;
+           PUSH nat 1 ;
+           DIP { DUP @pending } ;
+           SWAP ;
+           CAR %yetNeeded ;
+           COMPARE ;
+           LE ;
+           IF { DIP 3 { DUP @storage } ;
+                DIG 3 ;
+                DUP ;
+                CAR %m_required ;
+                SWAP ;
+                CDR ;
+                DUP ;
+                CAR %m_num_owners ;
+                SWAP ;
+                CDR ;
+                CAR %m_owners ;
+                PUSH (map bytes (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))
+                     {} ;
+                SWAP ;
+                PAIR %m_owners %m_pending ;
+                SWAP ;
+                PAIR %m_num_owners ;
+                SWAP ;
+                PAIR @storage %m_required ;
+                RIGHT % %Execute
+                  (pair :storage
+                     (nat %m_required)
+                     (pair (nat %m_num_owners)
+                           (pair (set %m_owners address)
+                                 (map %m_pending
+                                    bytes
+                                    (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))) }
+              { DUP @pending ;
+                CDR %ownersDone ;
+                PUSH int 1 ;
+                DIP 2 { DUP @pending } ;
+                DIG 2 ;
+                CAR %yetNeeded ;
+                INT ;
+                SUB ;
+                DUP ;
+                ABS ;
+                SWAP ;
+                GE ;
+                IF {} { UNIT ; FAILWITH } ;
+                RENAME @new_yetNeeded ;
+                PAIR @pending %yetNeeded %ownersDone ;
+                DIP 4 { DUP @storage } ;
+                DIG 4 ;
+                DUP ;
+                CAR %m_required ;
+                SWAP ;
+                CDR ;
+                DUP ;
+                CAR %m_num_owners ;
+                SWAP ;
+                CDR ;
+                CAR %m_owners ;
+                DIP 7 { DUP @storage } ;
+                DIG 7 ;
+                { CDR ; CDR ; CDR %m_pending } ;
+                DIP 4 { DUP @pending } ;
+                DIG 4 ;
+                CAR %yetNeeded ;
+                DIP 5 { DUP @pending } ;
+                DIG 5 ;
+                CDR %ownersDone ;
+                DIP 9 { DUP @owner } ;
+                DIG 9 ;
+                DIP { PUSH bool True } ;
+                UPDATE ;
+                SWAP ;
+                PAIR @pending %yetNeeded %ownersDone ;
+                DIP 7 { DUP @op_bytes } ;
+                DIG 7 ;
+                DIP { SOME } ;
+                DIP 6 { DROP } ;
+                UPDATE ;
+                SWAP ;
+                PAIR %m_owners %m_pending ;
+                SWAP ;
+                PAIR %m_num_owners ;
+                SWAP ;
+                PAIR @storage %m_required ;
+                LEFT %Confirmations_Needed %
+                  (pair :storage
+                     (nat %m_required)
+                     (pair (nat %m_num_owners)
+                           (pair (set %m_owners address)
+                                 (map %m_pending
+                                    bytes
+                                    (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))) } ;
+           DIP { DROP 5 } } ;
+       PAIR @confirmAndCheck__2_ ;
+       DIP { DUP @parameter } ;
+       SWAP ;
+       IF_LEFT
+         { RENAME @op_slash_29 ;
+           DIP 3 { DUP @storage } ;
+           DIG 3 ;
+           LAMBDA @is_owner
+             (pair address
+                   (pair :storage
+                      (nat %m_required)
+                      (pair (nat %m_num_owners)
+                            (pair (set %m_owners address)
+                                  (map %m_pending
+                                     bytes
+                                     (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+             bool
+             { RENAME @_addr_storage_slash_4 ;
+               DUP ;
+               CDR @storage ;
+               { CDR ; CDR ; CAR %m_owners } ;
+               DIP { DUP } ;
+               DIP 2 { DROP } ;
+               SWAP ;
+               CAR @addr ;
+               MEM } ;
+           DIP { DUP @storage } ;
+           SWAP ;
+           PAIR ;
+           DUP ;
+           CDR @is_owner_slash_7 ;
+           DIP { DUP } ;
+           SWAP ;
+           CAR @storage_slash_9 ;
+           SOURCE ;
+           PAIR ;
+           EXEC ;
+           IF { UNIT } { UNIT ; FAILWITH } ;
+           DIP { DROP } ;
+           DROP ;
+           SOURCE @owner ;
+           DIP 2 { DUP @op } ;
+           DIG 2 ;
+           PACK @op_bytes ;
+           DIP 2 { DUP @storage } ;
+           DIG 2 ;
+           { CDR ; CDR ; CDR %m_pending } ;
+           DIP { DUP @op_bytes } ;
+           SWAP ;
+           GET ;
+           IF_NONE
+             { UNIT ; FAILWITH }
+             { DUP @pending ;
+               CDR %ownersDone ;
+               DIP 3 { DUP @owner } ;
+               DIG 3 ;
+               MEM ;
+               IF { DUP @pending ;
+                    CDR %ownersDone ;
+                    PUSH nat 1 ;
+                    DIP 2 { DUP @pending } ;
+                    DIG 2 ;
+                    CAR %yetNeeded ;
+                    ADD ;
+                    PAIR @pending %yetNeeded %ownersDone ;
+                    DIP 4 { DUP @storage } ;
+                    DIG 4 ;
+                    DUP ;
+                    CAR %m_required ;
+                    SWAP ;
+                    CDR ;
+                    DUP ;
+                    CAR %m_num_owners ;
+                    SWAP ;
+                    CDR ;
+                    CAR %m_owners ;
+                    DIP 7 { DUP @storage } ;
+                    DIG 7 ;
+                    { CDR ; CDR ; CDR %m_pending } ;
+                    DIP 4 { DUP @pending } ;
+                    DIG 4 ;
+                    CAR %yetNeeded ;
+                    DIP 5 { DUP @pending } ;
+                    DIG 5 ;
+                    CDR %ownersDone ;
+                    DIP 9 { DUP @owner } ;
+                    DIG 9 ;
+                    DIP { PUSH bool False } ;
+                    UPDATE ;
+                    SWAP ;
+                    PAIR @pending %yetNeeded %ownersDone ;
+                    DIP 7 { DUP @op_bytes } ;
+                    DIG 7 ;
+                    DIP { SOME } ;
+                    DIP 6 { DROP } ;
+                    UPDATE ;
+                    SWAP ;
+                    PAIR %m_owners %m_pending ;
+                    SWAP ;
+                    PAIR %m_num_owners ;
+                    SWAP ;
+                    PAIR %m_required ;
+                    NIL @no_op operation ;
+                    PAIR }
+                  { DIP 3 { DUP @storage } ; DIG 3 ; NIL @no_op operation ; PAIR } ;
+               DIP { DROP } } ;
+           DIP { DROP 4 } }
+         { IF_LEFT
+             { RENAME @parameter_slash_36 ;
+               DIP { DUP @confirmAndCheck__2_ } ;
+               SWAP ;
+               DIP 4 { DUP @storage } ;
+               DIG 4 ;
+               DIP 2 { DUP @parameter } ;
+               DIG 2 ;
+               LEFT %ChangeOwner %
+                 (or (address %AddOwner) (or (address %RemoveOwner) (nat %ChangeRequirement))) ;
+               RIGHT % %_ (pair :transaction (address %destination) (mutez %amount)) ;
+               PAIR ;
+               DIP { DUP ; CAR ; SWAP ; CDR } ;
+               PAIR ;
+               EXEC ;
+               IF_LEFT
+                 { RENAME @storage_slash_38 ; NIL @no_op operation ; PAIR }
+                 { RENAME @storage_slash_39 ;
+                   DIP { DUP @parameter } ;
+                   SWAP ;
+                   DUP ;
+                   CAR @from ;
+                   DIP { DUP } ;
+                   SWAP ;
+                   CDR @_to ;
+                   DIP 3 { DUP @storage } ;
+                   DIG 3 ;
+                   DIP 2 { DUP @from } ;
+                   DIG 2 ;
+                   PAIR ;
+                   DUP ;
+                   CDR @storage ;
+                   { CDR ; CDR ; CAR %m_owners } ;
+                   DIP { DUP } ;
+                   DIP 2 { DROP } ;
+                   SWAP ;
+                   CAR @addr ;
+                   MEM ;
+                   NOT ;
+                   DIP 4 { DUP @storage } ;
+                   DIG 4 ;
+                   DIP 2 { DUP } ;
+                   DIG 2 ;
+                   PAIR ;
+                   DUP ;
+                   CDR @storage ;
+                   { CDR ; CDR ; CAR %m_owners } ;
+                   DIP { DUP } ;
+                   DIP 2 { DROP } ;
+                   SWAP ;
+                   CAR @addr ;
+                   MEM ;
+                   OR ;
+                   IF { UNIT ; FAILWITH }
+                      { DIP 3 { DUP @storage } ;
+                        DIG 3 ;
+                        DUP ;
+                        CAR %m_required ;
+                        SWAP ;
+                        CDR ;
+                        DUP ;
+                        CAR %m_num_owners ;
+                        SWAP ;
+                        CDR ;
+                        CAR %m_owners ;
+                        PUSH (map bytes (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))
+                             {} ;
+                        SWAP ;
+                        PAIR %m_owners %m_pending ;
+                        SWAP ;
+                        PAIR %m_num_owners ;
+                        SWAP ;
+                        PAIR %m_required ;
+                        DUP @storage ;
+                        DUP ;
+                        CAR %m_required ;
+                        SWAP ;
+                        CDR ;
+                        DUP ;
+                        CAR %m_num_owners ;
+                        SWAP ;
+                        CDR ;
+                        CDR %m_pending ;
+                        DIP 3 { DUP @storage } ;
+                        DIG 3 ;
+                        { CDR ; CDR ; CAR %m_owners } ;
+                        DIP 6 { DUP @from } ;
+                        DIG 6 ;
+                        DIP { PUSH bool False } ;
+                        UPDATE ;
+                        PAIR %m_owners %m_pending ;
+                        SWAP ;
+                        PAIR %m_num_owners ;
+                        SWAP ;
+                        PAIR @storage %m_required ;
+                        DUP @storage ;
+                        DUP ;
+                        CAR %m_required ;
+                        SWAP ;
+                        CDR ;
+                        DUP ;
+                        CAR %m_num_owners ;
+                        SWAP ;
+                        CDR ;
+                        CDR %m_pending ;
+                        DIP 3 { DUP @storage } ;
+                        DIG 3 ;
+                        { CDR ; CDR ; CAR %m_owners } ;
+                        DIP 6 { DUP } ;
+                        DIG 6 ;
+                        DIP { PUSH bool True } ;
+                        DIP 6 { DROP 2 } ;
+                        UPDATE ;
+                        PAIR %m_owners %m_pending ;
+                        SWAP ;
+                        PAIR %m_num_owners ;
+                        SWAP ;
+                        PAIR %m_required ;
+                        NIL @no_op operation ;
+                        PAIR } ;
+                   DIP { DROP 4 } } ;
+               DIP { DROP } }
+             { IF_LEFT
+                 { RENAME @owner_slash_45 ;
+                   DIP { DUP @confirmAndCheck__2_ } ;
+                   SWAP ;
+                   DIP 4 { DUP @storage } ;
+                   DIG 4 ;
+                   DIP 2 { DUP @owner } ;
+                   DIG 2 ;
+                   LEFT %AddOwner % (or (address %RemoveOwner) (nat %ChangeRequirement)) ;
+                   RIGHT % %_ (pair address address) ;
+                   RIGHT % %_ (pair :transaction (address %destination) (mutez %amount)) ;
+                   PAIR ;
+                   DIP { DUP ; CAR ; SWAP ; CDR } ;
+                   PAIR ;
+                   EXEC ;
+                   IF_LEFT
+                     { RENAME @storage_slash_47 ; NIL @no_op operation ; PAIR }
+                     { RENAME @storage_slash_48 ;
+                       DUP @storage ;
+                       DIP 2 { DUP @owner } ;
+                       DIG 2 ;
+                       PAIR ;
+                       DUP ;
+                       CDR @storage ;
+                       { CDR ; CDR ; CAR %m_owners } ;
+                       DIP { DUP } ;
+                       DIP 2 { DROP } ;
+                       SWAP ;
+                       CAR @addr ;
+                       MEM ;
+                       IF { UNIT ; FAILWITH } { UNIT } ;
+                       DROP ;
+                       DUP @storage ;
+                       DUP ;
+                       CAR %m_required ;
+                       SWAP ;
+                       CDR ;
+                       DUP ;
+                       CAR %m_num_owners ;
+                       SWAP ;
+                       CDR ;
+                       CAR %m_owners ;
+                       PUSH (map bytes (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))
+                            {} ;
+                       SWAP ;
+                       PAIR %m_owners %m_pending ;
+                       SWAP ;
+                       PAIR %m_num_owners ;
+                       SWAP ;
+                       PAIR %m_required ;
+                       DUP @storage ;
+                       DUP ;
+                       CAR %m_required ;
+                       SWAP ;
+                       CDR ;
+                       CDR ;
+                       PUSH nat 1 ;
+                       DIP 3 { DUP @storage } ;
+                       DIG 3 ;
+                       { CDR ; CAR %m_num_owners } ;
+                       ADD ;
+                       PAIR %m_num_owners ;
+                       SWAP ;
+                       PAIR @storage %m_required ;
+                       DUP @storage ;
+                       DUP ;
+                       CAR %m_required ;
+                       SWAP ;
+                       CDR ;
+                       DUP ;
+                       CAR %m_num_owners ;
+                       SWAP ;
+                       CDR ;
+                       CDR %m_pending ;
+                       DIP 3 { DUP @storage } ;
+                       DIG 3 ;
+                       { CDR ; CDR ; CAR %m_owners } ;
+                       DIP 7 { DUP @owner } ;
+                       DIG 7 ;
+                       DIP { PUSH bool True } ;
+                       DIP 6 { DROP 3 } ;
+                       UPDATE ;
+                       PAIR %m_owners %m_pending ;
+                       SWAP ;
+                       PAIR %m_num_owners ;
+                       SWAP ;
+                       PAIR %m_required ;
+                       NIL @no_op operation ;
+                       PAIR } ;
+                   DIP { DROP } }
+                 { IF_LEFT
+                     { RENAME @owner_slash_51 ;
+                       DIP { DUP @confirmAndCheck__2_ } ;
+                       SWAP ;
+                       DIP 4 { DUP @storage } ;
+                       DIG 4 ;
+                       DIP 2 { DUP @owner } ;
+                       DIG 2 ;
+                       LEFT %RemoveOwner % nat ;
+                       RIGHT % %_ address ;
+                       RIGHT % %_ (pair address address) ;
+                       RIGHT % %_ (pair :transaction (address %destination) (mutez %amount)) ;
+                       PAIR ;
+                       DIP { DUP ; CAR ; SWAP ; CDR } ;
+                       PAIR ;
+                       EXEC ;
+                       IF_LEFT
+                         { RENAME @storage_slash_53 ; NIL @no_op operation ; PAIR }
+                         { RENAME @storage_slash_54 ;
+                           DUP @storage ;
+                           DIP 2 { DUP @owner } ;
+                           DIG 2 ;
+                           PAIR ;
+                           DUP ;
+                           CDR @storage ;
+                           { CDR ; CDR ; CAR %m_owners } ;
+                           DIP { DUP } ;
+                           DIP 2 { DROP } ;
+                           SWAP ;
+                           CAR @addr ;
+                           MEM ;
+                           NOT ;
+                           IF { UNIT ; FAILWITH } { UNIT } ;
+                           DROP ;
+                           DUP @storage ;
+                           { CDR ; CAR %m_num_owners } ;
+                           DIP { DUP @storage } ;
+                           SWAP ;
+                           CAR %m_required ;
+                           COMPARE ;
+                           GE ;
+                           IF { UNIT ; FAILWITH } { UNIT } ;
+                           DROP ;
+                           DUP @storage ;
+                           DUP ;
+                           CAR %m_required ;
+                           SWAP ;
+                           CDR ;
+                           CDR ;
+                           PUSH int 1 ;
+                           DIP 3 { DUP @storage } ;
+                           DIG 3 ;
+                           { CDR ; CAR %m_num_owners } ;
+                           INT ;
+                           SUB ;
+                           DUP ;
+                           ABS ;
+                           SWAP ;
+                           GE ;
+                           IF {} { UNIT ; FAILWITH } ;
+                           RENAME @new_num_owners ;
+                           PAIR %m_num_owners ;
+                           SWAP ;
+                           PAIR @storage %m_required ;
+                           DUP @storage ;
+                           DUP ;
+                           CAR %m_required ;
+                           SWAP ;
+                           CDR ;
+                           DUP ;
+                           CAR %m_num_owners ;
+                           SWAP ;
+                           CDR ;
+                           CDR %m_pending ;
+                           DIP 3 { DUP @storage } ;
+                           DIG 3 ;
+                           { CDR ; CDR ; CAR %m_owners } ;
+                           DIP 6 { DUP @owner } ;
+                           DIG 6 ;
+                           DIP { PUSH bool False } ;
+                           DIP 6 { DROP 2 } ;
+                           UPDATE ;
+                           PAIR %m_owners %m_pending ;
+                           SWAP ;
+                           PAIR %m_num_owners ;
+                           SWAP ;
+                           PAIR @storage %m_required ;
+                           DUP ;
+                           CAR %m_required ;
+                           SWAP ;
+                           CDR ;
+                           DUP ;
+                           CAR %m_num_owners ;
+                           SWAP ;
+                           CDR ;
+                           CAR %m_owners ;
+                           PUSH (map bytes (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))
+                                {} ;
+                           SWAP ;
+                           PAIR %m_owners %m_pending ;
+                           SWAP ;
+                           PAIR %m_num_owners ;
+                           SWAP ;
+                           PAIR %m_required ;
+                           NIL @no_op operation ;
+                           PAIR } ;
+                       DIP { DROP } }
+                     { IF_LEFT
+                         { RENAME @required_slash_60 ;
+                           DIP { DUP @confirmAndCheck__2_ } ;
+                           SWAP ;
+                           DIP 4 { DUP @storage } ;
+                           DIG 4 ;
+                           DIP 2 { DUP @required } ;
+                           DIG 2 ;
+                           RIGHT % %ChangeRequirement address ;
+                           RIGHT % %_ address ;
+                           RIGHT % %_ (pair address address) ;
+                           RIGHT % %_ (pair :transaction (address %destination) (mutez %amount)) ;
+                           PAIR ;
+                           DIP { DUP ; CAR ; SWAP ; CDR } ;
+                           PAIR ;
+                           EXEC ;
+                           IF_LEFT
+                             { RENAME @storage_slash_62 ; NIL @no_op operation ; PAIR }
+                             { RENAME @storage_slash_63 ;
+                               DUP @storage ;
+                               { CDR ; CAR %m_num_owners } ;
+                               DIP 2 { DUP @required } ;
+                               DIG 2 ;
+                               COMPARE ;
+                               GT ;
+                               IF { UNIT ; FAILWITH } { UNIT } ;
+                               DROP ;
+                               DUP @storage ;
+                               DUP ;
+                               CAR %m_required ;
+                               SWAP ;
+                               CDR ;
+                               DUP ;
+                               CAR %m_num_owners ;
+                               SWAP ;
+                               CDR ;
+                               CAR %m_owners ;
+                               PUSH (map bytes (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))
+                                    {} ;
+                               SWAP ;
+                               PAIR %m_owners %m_pending ;
+                               SWAP ;
+                               PAIR %m_num_owners ;
+                               SWAP ;
+                               PAIR %m_required ;
+                               CDR ;
+                               DIP 2 { DUP @required } ;
+                               DIG 2 ;
+                               DIP 2 { DROP } ;
+                               PAIR %m_required ;
+                               NIL @no_op operation ;
+                               PAIR } ;
+                           DIP { DROP } }
+                         { IF_LEFT
+                             { RENAME @__slash_65 ;
+                               PUSH mutez 0 ;
+                               AMOUNT ;
+                               COMPARE ;
+                               EQ ;
+                               IF { UNIT ; FAILWITH }
+                                  { DIP 3 { DUP @storage } ; DIG 3 ; NIL @no_op operation ; PAIR } ;
+                               DIP { DROP } }
+                             { RENAME @t_slash_67 ;
+                               DIP 3 { DUP @storage } ;
+                               DIG 3 ;
+                               LAMBDA @is_owner
+                                 (pair address
+                                       (pair :storage
+                                          (nat %m_required)
+                                          (pair (nat %m_num_owners)
+                                                (pair (set %m_owners address)
+                                                      (map %m_pending
+                                                         bytes
+                                                         (pair :pending_state (nat %yetNeeded) (set %ownersDone address)))))))
+                                 bool
+                                 { RENAME @_addr_storage_slash_4 ;
+                                   DUP ;
+                                   CDR @storage ;
+                                   { CDR ; CDR ; CAR %m_owners } ;
+                                   DIP { DUP } ;
+                                   DIP 2 { DROP } ;
+                                   SWAP ;
+                                   CAR @addr ;
+                                   MEM } ;
+                               DIP { DUP @storage } ;
+                               SWAP ;
+                               PAIR ;
+                               DUP ;
+                               CDR @is_owner_slash_7 ;
+                               DIP { DUP } ;
+                               SWAP ;
+                               CAR @storage_slash_9 ;
+                               SOURCE ;
+                               PAIR ;
+                               EXEC ;
+                               IF { UNIT } { UNIT ; FAILWITH } ;
+                               DIP { DROP } ;
+                               DROP ;
+                               DIP 2 { DUP @confirmAndCheck__2_ } ;
+                               DIG 2 ;
+                               DIP { DUP @storage } ;
+                               SWAP ;
+                               DIP 3 { DUP @t } ;
+                               DIG 3 ;
+                               LEFT %Withdraw %
+                                 (or (pair %ChangeOwner address address)
+                                     (or (address %AddOwner) (or (address %RemoveOwner) (nat %ChangeRequirement)))) ;
+                               PAIR ;
+                               DIP { DUP ; CAR ; SWAP ; CDR } ;
+                               PAIR ;
+                               EXEC ;
+                               IF_LEFT
+                                 { RENAME @storage_slash_69 ; NIL @no_op operation ; PAIR }
+                                 { RENAME @storage_slash_70 ;
+                                   DUP @storage ;
+                                   NIL operation ;
+                                   DIP 4 { DUP @t } ;
+                                   DIG 4 ;
+                                   CAR %destination ;
+                                   CONTRACT unit ;
+                                   IF_NONE
+                                     { PUSH string "No entrypoint default with parameter type unit" ; FAILWITH }
+                                     {} ;
+                                   DIP 5 { DUP @t } ;
+                                   DIG 5 ;
+                                   DIP 4 { DROP } ;
+                                   CDR %amount ;
+                                   UNIT ;
+                                   TRANSFER_TOKENS @op ;
+                                   CONS ;
+                                   PAIR } ;
+                               DIP { DROP 2 } } } } } } } ;
+       DIP { DROP 3 } };

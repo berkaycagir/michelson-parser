@@ -1,0 +1,467 @@
+parameter
+  (or (pair %transfer address nat)
+      (or (pair %approve address nat)
+          (or (pair %transferFrom address (pair address nat))
+              (or (pair %balanceOf address address)
+                  (or (pair %allowance address (pair address address))
+                      (or (pair %createAccount address nat) (list %createAccounts (pair address nat))))))));
+storage
+  (pair :storage
+     (big_map :accounts
+        address
+        (pair :account (nat %balance) (map %allowances address nat)))
+     (pair (nat %version)
+           (pair (nat %totalSupply)
+                 (pair (nat %decimals) (pair (string %name) (pair (string %symbol) (address %owner)))))));
+code { DUP ;
+       DIP { CDR @storage_slash_1 } ;
+       CAR @parameter_slash_2 ;
+       LAMBDA @get_account
+         (pair address
+               (big_map address (pair :account (nat %balance) (map %allowances address nat))))
+         (pair :account (nat %balance) (map %allowances address nat))
+         { RENAME @_a_accounts_slash_3 ;
+           DUP ;
+           CDR @accounts ;
+           DIP { DUP } ;
+           SWAP ;
+           CAR @a ;
+           GET ;
+           IF_NONE
+             { PUSH (map address nat) {} ; PUSH nat 0 ; PAIR %balance %allowances }
+             {} ;
+           DIP { DROP } } ;
+       DUP @get_account ;
+       LAMBDA
+         (pair (pair address
+                     (pair address
+                           (pair nat
+                                 (pair :storage
+                                    (big_map :accounts
+                                       address
+                                       (pair :account (nat %balance) (map %allowances address nat)))
+                                    (pair (nat %version)
+                                          (pair (nat %totalSupply)
+                                                (pair (nat %decimals) (pair (string %name) (pair (string %symbol) (address %owner))))))))))
+               (lambda
+                  (pair address
+                        (big_map address (pair :account (nat %balance) (map %allowances address nat))))
+                  (pair :account (nat %balance) (map %allowances address nat))))
+         (pair (list operation)
+               (pair :storage
+                  (big_map :accounts
+                     address
+                     (pair :account (nat %balance) (map %allowances address nat)))
+                  (pair (nat %version)
+                        (pair (nat %totalSupply)
+                              (pair (nat %decimals) (pair (string %name) (pair (string %symbol) (address %owner))))))))
+         { RENAME @_from_dest_tokens_storage__get_account_slash_8 ;
+           DUP ;
+           CAR ;
+           CAR @from ;
+           DIP { DUP } ;
+           SWAP ;
+           CAR ;
+           { CDR ; CAR @dest } ;
+           DIP 2 { DUP } ;
+           DIG 2 ;
+           CAR ;
+           { CDR ; CDR ; CAR @tokens } ;
+           DIP 3 { DUP } ;
+           DIG 3 ;
+           CAR ;
+           { CDR ; CDR ; CDR @storage } ;
+           DUP @storage ;
+           CAR @accounts %accounts ;
+           DIP 5 { DUP } ;
+           DIG 5 ;
+           CDR @get_account_slash_7 ;
+           DIP { DUP @accounts } ;
+           SWAP ;
+           DIP 6 { DUP @from } ;
+           DIG 6 ;
+           PAIR ;
+           EXEC @account_sender ;
+           DIP { DUP @accounts } ;
+           SWAP ;
+           DIP 4 { DUP @tokens } ;
+           DIG 4 ;
+           DIP 2 { DUP @account_sender } ;
+           DIG 2 ;
+           CAR %balance ;
+           SUB ;
+           ISNAT ;
+           IF_NONE
+             { DIP { DUP @account_sender } ;
+               SWAP ;
+               CAR %balance ;
+               PUSH string "Not enough tokens for transfer" ;
+               PAIR ;
+               FAILWITH }
+             { DIP 2 { DUP @account_sender } ;
+               DIG 2 ;
+               CDR %allowances ;
+               DIP { DUP @b } ;
+               DIP 2 { DROP } ;
+               SWAP ;
+               PAIR %balance %allowances } ;
+           RENAME @new_account_sender ;
+           DIP 7 { DUP @from } ;
+           DIG 7 ;
+           DIP { SOME } ;
+           UPDATE @accounts ;
+           DIP 7 { DUP } ;
+           DIG 7 ;
+           CDR @get_account_slash_7 ;
+           DIP { DUP @accounts } ;
+           SWAP ;
+           DIP 7 { DUP @dest } ;
+           DIG 7 ;
+           PAIR ;
+           EXEC @account_dest ;
+           DIP 4 { DUP @storage } ;
+           DIG 4 ;
+           CDR ;
+           DIP 2 { DUP @accounts } ;
+           DIG 2 ;
+           DIP 2 { DUP @account_dest } ;
+           DIG 2 ;
+           CDR %allowances ;
+           DIP 8 { DUP @tokens } ;
+           DIG 8 ;
+           DIP 4 { DUP @account_dest } ;
+           DIG 4 ;
+           CAR %balance ;
+           ADD ;
+           PAIR @new_account_dest %balance %allowances ;
+           DIP 9 { DUP @dest } ;
+           DIG 9 ;
+           DIP { SOME } ;
+           DIP 4 { DROP 9 } ;
+           UPDATE @accounts ;
+           PAIR %accounts ;
+           NIL operation ;
+           PAIR } ;
+       PAIR @perform_transfer ;
+       DIP 2 { DUP @parameter } ;
+       DIG 2 ;
+       IF_LEFT
+         { RENAME @_dest_tokens_slash_23 ;
+           DIP { DUP @perform_transfer } ;
+           SWAP ;
+           DIP 5 { DUP @storage } ;
+           DIG 5 ;
+           DIP 2 { DUP } ;
+           DIG 2 ;
+           CDR @tokens ;
+           PAIR ;
+           DIP 2 { DUP } ;
+           DIG 2 ;
+           CAR @dest ;
+           PAIR ;
+           SENDER ;
+           PAIR ;
+           DIP { DUP ; CAR ; SWAP ; CDR } ;
+           DIP 3 { DROP } ;
+           PAIR ;
+           EXEC }
+         { IF_LEFT
+             { RENAME @_spender_tokens_slash_27 ;
+               DIP 4 { DUP @storage } ;
+               DIG 4 ;
+               DIP { DUP } ;
+               SWAP ;
+               CAR @spender ;
+               DIP 2 { DUP } ;
+               DIG 2 ;
+               CDR @tokens ;
+               DIP 5 { DUP @get_account } ;
+               DIG 5 ;
+               DIP 3 { DUP @storage } ;
+               DIG 3 ;
+               CAR %accounts ;
+               SENDER ;
+               PAIR ;
+               EXEC @account_sender ;
+               DIP 3 { DUP @storage } ;
+               DIG 3 ;
+               CDR ;
+               DIP 4 { DUP @storage } ;
+               DIG 4 ;
+               CAR %accounts ;
+               DIP 2 { DUP @account_sender } ;
+               DIG 2 ;
+               CAR %balance ;
+               PUSH nat 0 ;
+               DIP 5 { DUP @tokens } ;
+               DIG 5 ;
+               COMPARE ;
+               EQ ;
+               IF { DIP 3 { DUP @account_sender } ;
+                    DIG 3 ;
+                    CDR %allowances ;
+                    DIP 6 { DUP @spender } ;
+                    DIG 6 ;
+                    DIP { NONE nat } ;
+                    UPDATE }
+                  { DIP 3 { DUP @account_sender } ;
+                    DIG 3 ;
+                    CDR %allowances ;
+                    DIP 5 { DUP @tokens } ;
+                    DIG 5 ;
+                    DIP 7 { DUP @spender } ;
+                    DIG 7 ;
+                    DIP { SOME } ;
+                    UPDATE } ;
+               SWAP ;
+               PAIR @account_sender %balance %allowances ;
+               SENDER ;
+               DIP { SOME } ;
+               DIP 4 { DROP 5 } ;
+               UPDATE ;
+               PAIR @storage %accounts ;
+               NIL operation ;
+               PAIR }
+             { IF_LEFT
+                 { RENAME @_from_dest_tokens_slash_34 ;
+                   DIP 4 { DUP @storage } ;
+                   DIG 4 ;
+                   DIP { DUP } ;
+                   SWAP ;
+                   CAR @from ;
+                   DIP 2 { DUP } ;
+                   DIG 2 ;
+                   { CDR ; CDR @tokens } ;
+                   DIP 5 { DUP @get_account } ;
+                   DIG 5 ;
+                   DIP 3 { DUP @storage } ;
+                   DIG 3 ;
+                   CAR %accounts ;
+                   DIP 3 { DUP @from } ;
+                   DIG 3 ;
+                   PAIR ;
+                   EXEC @account_from ;
+                   DIP 5 { DUP @perform_transfer } ;
+                   DIG 5 ;
+                   DIP 4 { DUP @storage } ;
+                   DIG 4 ;
+                   CDR ;
+                   DIP 5 { DUP @storage } ;
+                   DIG 5 ;
+                   CAR %accounts ;
+                   DIP 3 { DUP @account_from } ;
+                   DIG 3 ;
+                   CAR %balance ;
+                   DIP 4 { DUP @account_from } ;
+                   DIG 4 ;
+                   CDR %allowances ;
+                   SENDER ;
+                   GET ;
+                   IF_NONE
+                     { DIP 6 { DUP @from } ;
+                       DIG 6 ;
+                       PUSH string "Not allowed to spend from" ;
+                       PAIR ;
+                       FAILWITH }
+                     { DIP 6 { DUP @tokens } ;
+                       DIG 6 ;
+                       DIP { DUP @allowed } ;
+                       SWAP ;
+                       SUB ;
+                       ISNAT ;
+                       IF_NONE
+                         { DUP @allowed ;
+                           PUSH string "Not enough allowance for transfer" ;
+                           PAIR ;
+                           FAILWITH }
+                         { PUSH nat 0 ;
+                           DIP { DUP @allowed } ;
+                           SWAP ;
+                           COMPARE ;
+                           EQ ;
+                           IF { DIP 6 { DUP @account_from } ;
+                                DIG 6 ;
+                                CDR %allowances ;
+                                SENDER ;
+                                DIP { NONE nat } ;
+                                UPDATE }
+                              { DIP 6 { DUP @account_from } ;
+                                DIG 6 ;
+                                CDR %allowances ;
+                                DIP { DUP @allowed } ;
+                                SWAP ;
+                                SENDER ;
+                                DIP { SOME } ;
+                                UPDATE } ;
+                           DIP { DROP } } ;
+                       DIP { DROP } } ;
+                   RENAME @new_allowances_from ;
+                   SWAP ;
+                   PAIR @account_from %balance %allowances ;
+                   DIP 6 { DUP @from } ;
+                   DIG 6 ;
+                   DIP { SOME } ;
+                   UPDATE ;
+                   PAIR @storage %accounts ;
+                   DIP 3 { DUP @tokens } ;
+                   DIG 3 ;
+                   PAIR ;
+                   DIP 6 { DUP } ;
+                   DIG 6 ;
+                   { CDR ; CAR @dest } ;
+                   PAIR ;
+                   DIP 4 { DUP @from } ;
+                   DIG 4 ;
+                   PAIR ;
+                   DIP { DUP ; CAR ; SWAP ; CDR } ;
+                   DIP 3 { DROP 5 } ;
+                   PAIR ;
+                   EXEC }
+                 { IF_LEFT
+                     { RENAME @_spender_forward_slash_45 ;
+                       DIP 4 { DUP @storage } ;
+                       DIG 4 ;
+                       DUP @storage ;
+                       NIL operation ;
+                       DIP 3 { DUP } ;
+                       DIG 3 ;
+                       CDR @forward ;
+                       CONTRACT %main nat ;
+                       IF_NONE
+                         { PUSH string "No entrypoint main with parameter type nat" ; FAILWITH }
+                         {} ;
+                       PUSH mutez 0 ;
+                       DIP 4 { DUP @storage } ;
+                       DIG 4 ;
+                       CAR %accounts ;
+                       DIP 6 { DUP } ;
+                       DIG 6 ;
+                       CAR @spender ;
+                       GET ;
+                       IF_NONE { PUSH nat 0 } { CAR %balance } ;
+                       DIP 5 { DROP 2 } ;
+                       RENAME @spender_balance ;
+                       TRANSFER_TOKENS ;
+                       CONS ;
+                       PAIR }
+                     { IF_LEFT
+                         { RENAME @_from_spender_forward_slash_51 ;
+                           DIP 4 { DUP @storage } ;
+                           DIG 4 ;
+                           DUP @storage ;
+                           NIL operation ;
+                           DIP 3 { DUP } ;
+                           DIG 3 ;
+                           { CDR ; CDR @forward } ;
+                           CONTRACT %main (pair nat nat) ;
+                           IF_NONE
+                             { PUSH string "No entrypoint main with parameter type (nat * nat)" ;
+                               FAILWITH }
+                             {} ;
+                           PUSH mutez 0 ;
+                           DIP 4 { DUP @storage } ;
+                           DIG 4 ;
+                           CAR %accounts ;
+                           DIP 6 { DUP } ;
+                           DIG 6 ;
+                           CAR @from ;
+                           GET ;
+                           IF_NONE
+                             { PUSH (pair nat nat) (Pair 0 0) }
+                             { DUP @account ;
+                               CDR %allowances ;
+                               DIP 7 { DUP } ;
+                               DIG 7 ;
+                               { CDR ; CAR @spender } ;
+                               GET ;
+                               IF_NONE
+                                 { DUP @account ; CAR %balance ; PUSH nat 0 ; PAIR }
+                                 { DIP { DUP @account } ;
+                                   SWAP ;
+                                   CAR %balance ;
+                                   DIP { DUP @allowed } ;
+                                   DIP 2 { DROP } ;
+                                   SWAP ;
+                                   PAIR } ;
+                               DIP { DROP } } ;
+                           DIP 5 { DROP 2 } ;
+                           RENAME @spender_allowance ;
+                           TRANSFER_TOKENS ;
+                           CONS ;
+                           PAIR }
+                         { IF_LEFT
+                             { RENAME @_dest_tokens_slash_59 ;
+                               DIP 4 { DUP @storage } ;
+                               DIG 4 ;
+                               DUP @storage ;
+                               { CDR ; CDR ; CDR ; CDR ; CDR ; CDR %owner } ;
+                               SENDER ;
+                               COMPARE ;
+                               NEQ ;
+                               IF { PUSH string "Only owner can create accounts" ; FAILWITH } { UNIT } ;
+                               DROP ;
+                               DIP 2 { DUP @perform_transfer } ;
+                               DIG 2 ;
+                               DIP { DUP @storage } ;
+                               SWAP ;
+                               DIP 3 { DUP } ;
+                               DIG 3 ;
+                               CDR @tokens ;
+                               PAIR ;
+                               DIP 3 { DUP } ;
+                               DIG 3 ;
+                               CAR @dest ;
+                               PAIR ;
+                               DIP 2 { DUP @storage } ;
+                               DIG 2 ;
+                               { CDR ; CDR ; CDR ; CDR ; CDR ; CDR %owner } ;
+                               PAIR ;
+                               DIP { DUP ; CAR ; SWAP ; CDR } ;
+                               DIP 3 { DROP 2 } ;
+                               PAIR ;
+                               EXEC }
+                             { RENAME @new_accounts_slash_63 ;
+                               DIP 4 { DUP @storage } ;
+                               DIG 4 ;
+                               DUP @storage ;
+                               { CDR ; CDR ; CDR ; CDR ; CDR ; CDR %owner } ;
+                               SENDER ;
+                               COMPARE ;
+                               NEQ ;
+                               IF { PUSH string "Only owner can create accounts" ; FAILWITH } { UNIT } ;
+                               DROP ;
+                               DUP @storage ;
+                               NIL operation ;
+                               PAIR ;
+                               DIP 2 { DUP @new_accounts } ;
+                               DIG 2 ;
+                               ITER { RENAME @_dest_tokens__ops_storage_slash_65 ;
+                                      DIP { DUP } ;
+                                      PAIR ;
+                                      DUP ;
+                                      CDR ;
+                                      CDR @storage ;
+                                      DIP 5 { DUP @perform_transfer } ;
+                                      DIG 5 ;
+                                      DIP { DUP @storage } ;
+                                      SWAP ;
+                                      DIP 3 { DUP } ;
+                                      DIG 3 ;
+                                      CAR ;
+                                      CDR @tokens ;
+                                      PAIR ;
+                                      DIP 3 { DUP } ;
+                                      DIG 3 ;
+                                      CAR ;
+                                      CAR @dest ;
+                                      PAIR ;
+                                      DIP 2 { DUP @storage } ;
+                                      DIG 2 ;
+                                      { CDR ; CDR ; CDR ; CDR ; CDR ; CDR %owner } ;
+                                      PAIR ;
+                                      DIP { DUP ; CAR ; SWAP ; CDR } ;
+                                      DIP 3 { DROP 3 } ;
+                                      PAIR ;
+                                      EXEC } ;
+                               DIP { DROP 2 } } } } } } } ;
+       DIP { DROP 4 } };

@@ -630,7 +630,6 @@ var grammar = {
     {"name": "type$ebnf$6$subexpression$2", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "type$ebnf$6", "symbols": ["type$ebnf$6", "type$ebnf$6$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("doubleArgType") ? {type: "doubleArgType"} : doubleArgType), "type$ebnf$6", "__", "type", "__", "type", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": doubleArgTypeKeywordWithParenToJson},
-    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return ""; }},
     {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return d[2]; }},
     {"name": "subInstruction$ebnf$1$subexpression$1$ebnf$1$subexpression$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subInstruction$ebnf$1$subexpression$1$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$1$ebnf$1$subexpression$1"], "postprocess": id},

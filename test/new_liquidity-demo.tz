@@ -1,0 +1,31 @@
+parameter %default string;
+storage (map string int);
+code { DUP ;
+       DIP { CDR @votes_slash_1 } ;
+       CAR @choice_slash_2 ;
+       PUSH mutez 5000000 ;
+       AMOUNT @amount ;
+       COMPARE ;
+       LT ;
+       IF { PUSH string "Not enough money, at least 5tz to vote" ; FAILWITH }
+          { DIP { DUP @votes } ;
+            SWAP ;
+            DIP { DUP @choice } ;
+            SWAP ;
+            GET ;
+            IF_NONE
+              { PUSH string "Bad vote" ; FAILWITH }
+              { DIP 2 { DUP @votes } ;
+                DIG 2 ;
+                PUSH int 1 ;
+                DIP 2 { DUP @x } ;
+                DIG 2 ;
+                ADD ;
+                DIP 3 { DUP @choice } ;
+                DIG 3 ;
+                DIP { SOME } ;
+                DIP 3 { DROP } ;
+                UPDATE @votes ;
+                NIL operation ;
+                PAIR } } ;
+       DIP { DROP 2 } };
