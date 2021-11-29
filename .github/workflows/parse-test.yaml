@@ -13,8 +13,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           cache: 'npm'
-      - run: npm install
-      - run: npm test
       - run: npm install --save nearley
       - run: npm install -g nearley
       - uses: actions/setup-python@v2
