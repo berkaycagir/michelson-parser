@@ -530,7 +530,7 @@ const instructionSetToJsonSemi = (d, isNested) => {
  * parameter, storage, code
  */
 //const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
-const scriptToJson = d => `[ ${d[1]}, ${d[3]}, { "prim": "code", "args": [ ${d[5]} ] } ]`;
+const scriptToJson = (p, s, c) => `[ ${p}, ${s}, { "prim": "code", "args": [ ${c} ] } ]`;
 
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
@@ -585,7 +585,12 @@ const findLine = d => {
 var grammar = {
     Lexer: lexer,
     ParserRules: [
-    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code", "_"], "postprocess": scriptToJson},
+    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code", "_"], "postprocess": function (d) { return scriptToJson(d[1], d[3], d[5]); }},
+    {"name": "main", "symbols": ["_", "parameter", "_", "code", "_", "storage", "_"], "postprocess": function (d) { return scriptToJson(d[1], d[5], d[3]); }},
+    {"name": "main", "symbols": ["_", "code", "_", "parameter", "_", "storage", "_"], "postprocess": function (d) { return scriptToJson(d[3], d[5], d[1]); }},
+    {"name": "main", "symbols": ["_", "code", "_", "storage", "_", "parameter", "_"], "postprocess": function (d) { return scriptToJson(d[5], d[3], d[1]); }},
+    {"name": "main", "symbols": ["_", "storage", "_", "parameter", "_", "code", "_"], "postprocess": function (d) { return scriptToJson(d[3], d[1], d[5]); }},
+    {"name": "main", "symbols": ["_", "storage", "_", "code", "_", "parameter", "_"], "postprocess": function (d) { return scriptToJson(d[5], d[1], d[3]); }},
     {"name": "parameter$ebnf$1", "symbols": []},
     {"name": "parameter$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
     {"name": "parameter$ebnf$1", "symbols": ["parameter$ebnf$1", "parameter$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},

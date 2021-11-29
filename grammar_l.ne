@@ -1,6 +1,11 @@
 @lexer lexer
 
-main -> _ parameter _ storage _ code _ {% scriptToJson %}
+main -> _ parameter _ storage _ code _ {% function (d) { return scriptToJson(d[1], d[3], d[5]); } %}
+      | _ parameter _ code _ storage _ {% function (d) { return scriptToJson(d[1], d[5], d[3]); } %}
+      | _ code _ parameter _ storage _ {% function (d) { return scriptToJson(d[3], d[5], d[1]); } %}
+      | _ code _ storage _ parameter _ {% function (d) { return scriptToJson(d[5], d[3], d[1]); } %}
+      | _ storage _ parameter _ code _ {% function (d) { return scriptToJson(d[3], d[1], d[5]); } %}
+      | _ storage _ code _ parameter _ {% function (d) { return scriptToJson(d[5], d[1], d[3]); } %}
 
 parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
@@ -641,7 +646,7 @@ const instructionSetToJsonSemi = (d, isNested) => {
  * parameter, storage, code
  */
 //const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
-const scriptToJson = d => `[ ${d[1]}, ${d[3]}, { "prim": "code", "args": [ ${d[5]} ] } ]`;
+const scriptToJson = (p, s, c) => `[ ${p}, ${s}, { "prim": "code", "args": [ ${c} ] } ]`;
 
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
