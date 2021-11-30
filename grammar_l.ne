@@ -12,7 +12,7 @@ parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordTo
 storage -> %storage (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 code ->
-        %code _ subInstruction _ semicolons {% function (d) { return d[2]; } %}
+        %code _ subInstruction (_ %semicolon):? {% function (d) { return d[2]; } %}
       | %code _ %lbrace _ %rbrace _ %semicolon {% function (d) { return "code {}"; } %}
 
 type ->
@@ -27,27 +27,15 @@ type ->
       | %lparen _ %singleArgType (__ %annot):+ __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
       | %lparen _ %doubleArgType (__ %annot):+ __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
-
-# subInstruction ->
-#                 %lbrace _ %rbrace {% function(d) { return ""; } %}
-#               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-#               | %lbrace _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return instructionSetToJsonNoSemi(d, false); } %}
-#               | %lbrace _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return instructionSetToJsonSemi(d, false); } %}
-#                # cases with nested {}
-#               | %lbrace _ subInstruction _ semicolons _ %rbrace {% function(d) { return d[2]; } %}
-#               | %lbrace _ subInstruction _ semicolons _ instruction _ %rbrace {% function(d) { return d[2].concat(d[6]); } %}
-#               | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ instruction _ %rbrace {% function(d) { return instructionSetToJsonNoSemi(d, true); } %}
-#               | %lbrace _ subInstruction _ semicolons _ (instruction _ %semicolon _):+ %rbrace {% function(d) { return instructionSetToJsonSemi(d, true); } %}
-
 subInstruction ->
-               %lbrace _ %rbrace {% function(d) { return ""; } %}
+                %lbrace _ %rbrace {% function(d) { return ""; } %}
               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? %rbrace {% function(d) { return "TODO!!"; } %} # TODO
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? instruction _ %rbrace {% function(d) { return "TODO!!!"; } %} # TODO
 
 instruction ->
               # bare instruction
-              instructions (__ %annot):* {% keywordToJson %}
+                instructions (__ %annot):* {% keywordToJson %}
               # instruction w/ subinstruction
               | instructions (__ %annot):* _ subInstruction {% singleArgInstrKeywordToJson %}
               # instruction w/ type
