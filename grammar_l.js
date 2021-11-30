@@ -21,7 +21,7 @@ const macroIFCMPlist = ["IFCMPEQ", "IFCMPNEQ", "IFCMPLT", "IFCMPGT", "IFCMPLE", 
 const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
 const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
 const lexer = moo.compile({
-    annot: /[\@\%\:][a-z_A-Z0-9]+/,
+    annot: /[\@\%\:][a-z_A-Z0-9\%\.\@]*/,
     // comment: /\#.*/,
     comment: /(?:\#.*)|(?:\/\*[\s\S]*\*\/)/,
     lparen: "(",
@@ -31,6 +31,7 @@ const lexer = moo.compile({
     ws: {match: /\s+/, lineBreaks: true},
     semicolon: ";",
     number: /-?[0-9]+/,
+    hex: /0[xX][0-9a-fA-F]+/,
     parameter: ["parameter", "Parameter"],
     storage: ["Storage", "storage"],
     code: ["Code", "code"],
@@ -337,6 +338,11 @@ const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": "${findLine(d)}" }
  * Example: "string" -> "{ "string": "blah" }"
  */
 const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
+/**
+ * Given a hex, convert it to JSON.
+ * Example: "0x123456" -> "{ "bytes": "123456" }"
+ */
+const hexToJson = d => `{ "bytes": ${d[0]}, "line": "${findLine(d)}" }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"
@@ -730,6 +736,7 @@ var grammar = {
     {"name": "data", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("doubleArgData") ? {type: "doubleArgData"} : doubleArgData), "__", "data", "__", "data", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": doubleArgKeywordWithParenToJson},
     {"name": "data", "symbols": ["subData"], "postprocess": id},
     {"name": "data", "symbols": ["subElt"], "postprocess": id},
+    {"name": "data", "symbols": [(lexer.has("hex") ? {type: "hex"} : hex)], "postprocess": hexToJson},
     {"name": "data", "symbols": [(lexer.has("number") ? {type: "number"} : number)], "postprocess": intToJson},
     {"name": "data", "symbols": [(lexer.has("string") ? {type: "string"} : string)], "postprocess": stringToJson},
     {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "[]"; }},

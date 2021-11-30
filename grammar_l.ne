@@ -94,6 +94,7 @@ data ->
       | %lparen _ %doubleArgData __ data __ data _ %rparen {% doubleArgKeywordWithParenToJson %}
       | subData  {% id %}
       | subElt {% id %}
+      | %hex {% hexToJson %}
       | %number {% intToJson %}
       | %string {% stringToJson %}
 
@@ -137,7 +138,7 @@ const macroIFCMPlist = ["IFCMPEQ", "IFCMPNEQ", "IFCMPLT", "IFCMPGT", "IFCMPLE", 
 const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
 const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
 const lexer = moo.compile({
-    annot: /[\@\%\:][a-z_A-Z0-9]+/,
+    annot: /[\@\%\:][a-z_A-Z0-9\%\.\@]*/,
     // comment: /\#.*/,
     comment: /(?:\#.*)|(?:\/\*[\s\S]*\*\/)/,
     lparen: "(",
@@ -147,6 +148,7 @@ const lexer = moo.compile({
     ws: {match: /\s+/, lineBreaks: true},
     semicolon: ";",
     number: /-?[0-9]+/,
+    hex: /0[xX][0-9a-fA-F]+/,
     parameter: ["parameter", "Parameter"],
     storage: ["Storage", "storage"],
     code: ["Code", "code"],
@@ -453,6 +455,11 @@ const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": "${findLine(d)}" }
  * Example: "string" -> "{ "string": "blah" }"
  */
 const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
+/**
+ * Given a hex, convert it to JSON.
+ * Example: "0x123456" -> "{ "bytes": "123456" }"
+ */
+const hexToJson = d => `{ "bytes": ${d[0]}, "line": "${findLine(d)}" }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"

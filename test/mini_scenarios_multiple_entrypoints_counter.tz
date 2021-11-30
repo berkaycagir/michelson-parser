@@ -1,4 +1,4 @@
-{ parameter unit ;
+ parameter unit ;
   storage (option address) ;
   code { SENDER ; SELF ; ADDRESS ;
          IFCMPEQ
@@ -26,4 +26,4 @@
                             NIL operation ; PAIR } } } ;
              DIP { SELF ; PUSH mutez 0 } ; TRANSFER_TOKENS ;
              NIL operation ; SWAP ; CONS ; SWAP ; CONS ;
-             DIP { SOME } ; PAIR } } }
+             DIP { SOME } ; PAIR } } 

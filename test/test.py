@@ -6,6 +6,8 @@ multiples = []
 errors = []
 
 for file in os.listdir("test"):
+    if not file.endswith(".tz"):
+        pass
     print("• Testing file {}... ".format(file), end="")
     content = subprocess.run(['cat', "test/" + file], check=True, capture_output=True)
     execution = subprocess.run(["nearley-test", "grammar_l.js", "-q"], input=content.stdout, capture_output=True)
