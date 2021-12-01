@@ -18,14 +18,12 @@ code ->
 type ->
         %comparableType (__ %annot):* {% keywordToJson %}
       | %constantType (__ %annot):* {% keywordToJson %}
-      | %singleArgType __ type {% singleArgKeywordToJson %}
-      | %lparen _ %singleArgType __ (type | %lparen _ type _ %rparen) _ %rparen {% singleArgKeywordWithParenToJson %}
+      | %singleArgType (__ %annot):* __ type {% singleArgKeywordToJson %}
       | %doubleArgType __ type __ type {% doubleArgKeywordToJson %}
-      | %lparen _ %doubleArgType __ type __ type _ %rparen {% doubleArgKeywordWithParenToJson %}
-      | %lparen _ %comparableType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %constantType (__ %annot):+ _ %rparen {% comparableTypeToJson %}
-      | %lparen _ %singleArgType (__ %annot):+ __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
-      | %lparen _ %doubleArgType (__ %annot):+ __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
+      | %lparen _ %comparableType (__ %annot):* _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %constantType (__ %annot):* _ %rparen {% comparableTypeToJson %}
+      | %lparen _ %singleArgType (__ %annot):* __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
+      | %lparen _ %doubleArgType (__ %annot):* __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 subInstruction ->
                 # %lbrace _ %rbrace {% function(d) { return ""; } %}
@@ -536,7 +534,7 @@ const singleArgTypeKeywordToJson = d => {
  * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
  * Also: (option (mutez))
  */
-const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4][d[4].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[5][d[5].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
 
 /**
  * Given a keyword with two arguments, convert it into JSON.
