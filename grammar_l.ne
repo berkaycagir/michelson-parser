@@ -26,8 +26,8 @@ type ->
       | %lparen _ %doubleArgType (__ %annot):* __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 subInstruction ->
-                # %lbrace _ %rbrace {% function(d) { return ""; } %}
-                %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
+                %lbrace _ %rbrace {% function(d) { return ""; } %}
+              | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? %rbrace {% function(d) { return "TODO!!"; } %} # TODO
               | %lbrace _ (subInstruction _ (%semicolon _):?):? (instruction _ %semicolon _):+ (subInstruction _ (%semicolon _):?):? instruction _ %rbrace {% function(d) { return "TODO!!!"; } %} # TODO
 
@@ -57,7 +57,7 @@ instruction ->
               | "DROP" __ %number {% dropnToJson %}
               | "DROP" {% keywordToJson %}
               # empty?
-              | %lbrace _ %rbrace {% function(d) { return ""; } %}
+              #| %lbrace _ %rbrace {% function(d) { return ""; } %}
               # CREATE_CONTRACT
               | "CREATE_CONTRACT" __ %lbrace _ parameter _ storage _ code _ %rbrace {% subContractToJson %}
               # EMPTY_MAP
@@ -85,13 +85,13 @@ data ->
       | %string {% stringToJson %}
 
 subData ->
-           %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-         | %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+          # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+           %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
          | %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 subElt ->
-          %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-        | %lbrace _ (elt _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+         # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+          %lbrace _ (elt _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
         | %lparen _ (elt _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
