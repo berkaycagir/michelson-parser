@@ -92,9 +92,11 @@ data ->
       | %string {% stringToJson %}
 
 subData ->
-          # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-           %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+           %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+         | %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+         | %lbrace _ (data _ %semicolon _):* data _ %rbrace {% function(d) { return "TODO"; } %}
          | %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
+         | %lparen _ (data _ %semicolon _):* data _ %rparen {% function(d) { return "TODO!!"; } %}
 
 subElt ->
          # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
@@ -140,8 +142,8 @@ const lexer = moo.compile({
     rbrace: "}",
     ws: {match: /\s+/, lineBreaks: true},
     semicolon: ";",
-    number: /-?[0-9]+/,
     hex: /0[xX][0-9a-fA-F]+/,
+    number: /-?[0-9]+/,
     parameter: ["parameter", "Parameter"],
     storage: ["Storage", "storage"],
     code: ["Code", "code"],
@@ -541,7 +543,7 @@ const singleArgTypeKeywordToJson = d => {
  * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
  * Also: (option (mutez))
  */
-const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[5][d[5].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4][d[4].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
 
 /**
  * Given a keyword with two arguments, convert it into JSON.

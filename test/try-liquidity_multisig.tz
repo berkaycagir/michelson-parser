@@ -165,4 +165,3 @@ code { DUP ;
                DIP { DROP } } ;
            DIP { DROP 5 } } ;
        DIP { DROP 2 } };
-k

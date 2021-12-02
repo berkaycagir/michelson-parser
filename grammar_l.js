@@ -30,8 +30,8 @@ const lexer = moo.compile({
     rbrace: "}",
     ws: {match: /\s+/, lineBreaks: true},
     semicolon: ";",
-    number: /-?[0-9]+/,
     hex: /0[xX][0-9a-fA-F]+/,
+    number: /-?[0-9]+/,
     parameter: ["parameter", "Parameter"],
     storage: ["Storage", "storage"],
     code: ["Code", "code"],
@@ -431,7 +431,7 @@ const singleArgTypeKeywordToJson = d => {
  * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
  * Also: (option (mutez))
  */
-const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[5][d[5].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4][d[4].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
 
 /**
  * Given a keyword with two arguments, convert it into JSON.
@@ -736,16 +736,25 @@ var grammar = {
     {"name": "data", "symbols": [(lexer.has("hex") ? {type: "hex"} : hex)], "postprocess": hexToJson},
     {"name": "data", "symbols": [(lexer.has("number") ? {type: "number"} : number)], "postprocess": intToJson},
     {"name": "data", "symbols": [(lexer.has("string") ? {type: "string"} : string)], "postprocess": stringToJson},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "[]"; }},
     {"name": "subData$ebnf$1$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subData$ebnf$1", "symbols": ["subData$ebnf$1$subexpression$1"]},
     {"name": "subData$ebnf$1$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subData$ebnf$1", "symbols": ["subData$ebnf$1", "subData$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
     {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subData$ebnf$1", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subData$ebnf$2", "symbols": []},
     {"name": "subData$ebnf$2$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subData$ebnf$2", "symbols": ["subData$ebnf$2$subexpression$1"]},
-    {"name": "subData$ebnf$2$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
-    {"name": "subData$ebnf$2", "symbols": ["subData$ebnf$2", "subData$ebnf$2$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subData$ebnf$2", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subData$ebnf$2", "symbols": ["subData$ebnf$2", "subData$ebnf$2$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subData$ebnf$2", "data", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO"; }},
+    {"name": "subData$ebnf$3$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$3", "symbols": ["subData$ebnf$3$subexpression$1"]},
+    {"name": "subData$ebnf$3$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$3", "symbols": ["subData$ebnf$3", "subData$ebnf$3$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subData$ebnf$3", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subData$ebnf$4", "symbols": []},
+    {"name": "subData$ebnf$4$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$4", "symbols": ["subData$ebnf$4", "subData$ebnf$4$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subData$ebnf$4", "data", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": function(d) { return "TODO!!"; }},
     {"name": "subElt$ebnf$1$subexpression$1", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
     {"name": "subElt$ebnf$1", "symbols": ["subElt$ebnf$1$subexpression$1"]},
     {"name": "subElt$ebnf$1$subexpression$2", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
