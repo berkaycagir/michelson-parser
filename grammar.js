@@ -3,483 +3,786 @@
 (function () {
 function id(x) { return x[0]; }
 
-function single_param(d) {
-    return [ d[0], d[2] ]
-}
+/*jshint esversion: 6 */
+const moo = require("moo");
 
-function dip(d) {
-    return [ d[0], d[4] ]
-}
-
-function dipi(d) {
-    return [ d[0], d[2], d[6] ]
-}
-
-function code(d) {
-    var rarr = [];
-    for (var i = 0; i < d[4].length; i++) {
-        rarr[i] = d[4][i];
-    }
-    return rarr;
-}
-
-function ifs(d) {
-    return [d[0], d[4], d[10]];
-}
-
-function ins(d) {
-    if (d[0].length == 1) {
-        return d[0][0];
-    } else {
-        return d[0];
-    }
-}
-
-var grammar = {
-    Lexer: undefined,
-    ParserRules: [
-    {"name": "_$ebnf$1", "symbols": []},
-    {"name": "_$ebnf$1", "symbols": ["_$ebnf$1", "wschar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "_", "symbols": ["_$ebnf$1"], "postprocess": function(d) {return null;}},
-    {"name": "__$ebnf$1", "symbols": ["wschar"]},
-    {"name": "__$ebnf$1", "symbols": ["__$ebnf$1", "wschar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "__", "symbols": ["__$ebnf$1"], "postprocess": function(d) {return null;}},
-    {"name": "wschar", "symbols": [/[ \t\n\v\f]/], "postprocess": id},
-    {"name": "unsigned_int$ebnf$1", "symbols": [/[0-9]/]},
-    {"name": "unsigned_int$ebnf$1", "symbols": ["unsigned_int$ebnf$1", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "unsigned_int", "symbols": ["unsigned_int$ebnf$1"], "postprocess": 
-        function(d) {
-            return parseInt(d[0].join(""));
+const macroCADRconst = /C[AD]+R/;
+const macroSETCADRconst = /SET_C[AD]+R/;
+const macroDIPconst = /DII+P/;
+const macroDUPconst = /DUU+P/;
+const DIPmatcher = new RegExp(macroDIPconst);
+const DUPmatcher = new RegExp(macroDUPconst);
+const macroASSERTlistConst = ["ASSERT", "ASSERT_EQ", "ASSERT_NEQ", "ASSERT_GT",
+                              "ASSERT_LT", "ASSERT_GE", "ASSERT_LE", "ASSERT_NONE",
+                              "ASSERT_SOME", "ASSERT_LEFT", "ASSERT_RIGHT", "ASSERT_CMPEQ",
+                              "ASSERT_CMPNEQ", "ASSERT_CMPGT", "ASSERT_CMPLT", "ASSERT_CMPGE",
+                              "ASSERT_CMPLE"];
+const macroIFCMPlist = ["IFCMPEQ", "IFCMPNEQ", "IFCMPLT", "IFCMPGT", "IFCMPLE", "IFCMPGE"];
+const macroCMPlist = ["CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE", "CMPGE"];
+const macroIFlist = ["IFEQ", "IFNEQ", "IFLT", "IFGT", "IFLE", "IFGE"];
+const lexer = moo.compile({
+    annot: /[\@\%\:][a-z_A-Z0-9\%\.\@]*/,
+    // comment: /\#.*/,
+    comment: /(?:\#.*)|(?:\/\*[\s\S]*\*\/)/,
+    lparen: "(",
+    rparen: ")",
+    lbrace: "{",
+    rbrace: "}",
+    ws: {match: /\s+/, lineBreaks: true},
+    semicolon: ";",
+    hex: /0[xX][0-9a-fA-F]+/,
+    number: /-?[0-9]+/,
+    parameter: ["parameter", "Parameter"],
+    storage: ["Storage", "storage"],
+    code: ["Code", "code"],
+    comparableType: ["int", "nat", "string", "bytes", "mutez", "bool", "key_hash", "timestamp", "chain_id"],
+    constantType: ["key", "unit", "signature", "operation", "address"],
+    singleArgType: ["option", "list", "set", "contract"],
+    doubleArgType: ["pair", "or", "lambda", "map", "big_map"],
+    baseInstruction: ["ABS", "ADD", "ADDRESS", "AMOUNT", "AND", "BALANCE", "BLAKE2B", "CAR", "CAST", "CDR", "CHECK_SIGNATURE",
+        "COMPARE", "CONCAT", "CONS", "CONTRACT", /*"CREATE_CONTRACT",*/ "DIP", /*"DROP",*/ "DUP", "EDIV",
+        "EMPTY_SET", "EQ", "EXEC", "FAIL", "FAILWITH", "GE", "GET", "GT", "HASH_KEY", "IF", "IF_CONS", "IF_LEFT", "IF_NONE",
+        "IF_RIGHT", "IMPLICIT_ACCOUNT", "INT", "ISNAT", "ITER", "LAMBDA", "LE", "LEFT", "LOOP", "LOOP_LEFT", "LSL", "LSR", "LT",
+        "MAP", "MEM", "MUL", "NEG", "NEQ", "NIL", "NONE", "NOT", "NOW", "OR", "PACK", "PAIR", /*"PUSH",*/ "REDUCE", "RENAME", "RIGHT", "SELF",
+        "SENDER", "SET_DELEGATE", "SHA256", "SHA512", "SIZE", "SLICE", "SOME", "SOURCE", "STEPS_TO_QUOTA", "SUB", "SWAP",
+        "TRANSFER_TOKENS", "UNIT", "UNPACK", "UPDATE", "XOR",
+        "UNPAIR", "UNPAPAIR",
+        "IF_SOME",
+        "IFCMPEQ", "IFCMPNEQ", "IFCMPLT", "IFCMPGT", "IFCMPLE", "IFCMPGE", "CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE",
+        "CMPGE", "IFEQ", "NEQ", "IFLT", "IFGT", "IFLE", "IFGE",
+        /*"DIG",*/ /*"DUG",*/ "EMPTY_BIG_MAP", "APPLY", "CHAIN_ID"
+    ],
+    macroCADR: macroCADRconst,
+    macroDIP: macroDIPconst,
+    macroDUP: macroDUPconst,
+    macroSETCADR: macroSETCADRconst,
+    macroASSERTlist: macroASSERTlistConst,
+    constantData: ["Unit", "True", "False", "None", "instruction"],
+    singleArgData: ["Left", "Right", "Some"],
+    doubleArgData: ["Pair"],
+    elt: "Elt",
+    word: /[a-zA-Z_0-9]+/,
+    string: /"(?:\\["\\]|[^\n"\\])*"/
+});
+const checkC_R = c_r => {
+    var pattern = new RegExp("^C(A|D)(A|D)+R$"); // TODO
+    return pattern.test(c_r);
+};
+const expandC_R = (word, annot, d) => {
+    var expandedC_R = word.slice(1, -1).split("").map(c => (c === "A" ? '{ "prim": "CAR" }' : '{ "prim": "CDR" }'));
+    if (annot != null) {
+        const lastChar = word.slice(-2, -1);
+        if (lastChar === "A") {
+            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CAR", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "int$ebnf$1$subexpression$1", "symbols": [{"literal":"-"}]},
-    {"name": "int$ebnf$1$subexpression$1", "symbols": [{"literal":"+"}]},
-    {"name": "int$ebnf$1", "symbols": ["int$ebnf$1$subexpression$1"], "postprocess": id},
-    {"name": "int$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "int$ebnf$2", "symbols": [/[0-9]/]},
-    {"name": "int$ebnf$2", "symbols": ["int$ebnf$2", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "int", "symbols": ["int$ebnf$1", "int$ebnf$2"], "postprocess": 
-        function(d) {
-            if (d[0]) {
-                return parseInt(d[0][0]+d[1].join(""));
-            } else {
-                return parseInt(d[1].join(""));
+        else if (lastChar === "D") {
+            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CDR", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        }
+    }
+    return `[ ${expandedC_R.join(", ")}, { "line": "${findLine(d)}" } ]`;
+};
+const check_compare = cmp => macroCMPlist.includes(cmp);
+const expand_cmp = (cmp, annot, d) => {
+    var op = cmp.substring(3);
+    var binary_op = keywordToJson([`${op}`]);
+    var compare = keywordToJson(["COMPARE"]);
+    if (annot != null) {
+        binary_op = `{ "prim": "${op}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+    }
+    return `[ ${compare}, ${binary_op}, { "line": "${findLine(d)}" } ]`;
+};
+const check_dup = dup => DUPmatcher.test(dup);
+const expand_dup = (dup, annot, d) => {
+    let t = "";
+    if (DUPmatcher.test(dup)) {
+        const c = dup.length - 3;
+        for (let i = 0; i < c; i++) {
+            t += '[ { "prim": "DIP", "args": [ ';
+        }
+        if (annot == null) {
+            t += `[ { "prim": "DUP" }, { "line": "${findLine(d)}" } ]`;
+        }
+        else {
+            t += `[ { "prim": "DUP", "annots": [${annot}] }, { "line": "${findLine(d)}" } ]`;
+        }
+        for (let i = 0; i < c; i++) {
+            t += ` ] }, { "prim": "SWAP" }, { "line": "${findLine(d)}" } ]`;
+        }
+        return t;
+    }
+    throw new Error("");
+};
+const check_assert = assert => macroASSERTlistConst.includes(assert);
+const expand_assert = (assert, annot, d) => {
+    const annotation = !!annot ? `, "annots": [ ${annot} ]` : "";
+    switch (assert) {
+        case "ASSERT":
+            return `[ { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPEQ":
+            return `[ [ { "prim": "COMPARE"}, { "prim": "EQ" } ], {"prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPGE":
+            return `[ [ { "prim":"COMPARE" }, { "prim": "GE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPGT":
+            return `[ [ { "prim": "COMPARE" }, { "prim": "GT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPLE":
+            return `[ [ { "prim": "COMPARE" }, { "prim": "LE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPLT":
+            return `[ [ { "prim": "COMPARE" }, { "prim": "LT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_CMPNEQ":
+            return `[ [ { "prim": "COMPARE" }, { "prim": "NEQ" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_EQ":
+            return `[ { "prim": "EQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_GE":
+            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim":"FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_GT":
+            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_LE":
+            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_LT":
+            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        case "ASSERT_NEQ":
+            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+        default:
+            return "";
+    }
+};
+const check_fail = fail => fail === "FAIL";
+const expand_fail = (fail, annot, d) => {
+    if (annot == null) {
+        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH" }, { "line": "${findLine(d)}" } ]`;
+    }
+    else {
+        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH", "annots": [${annot}] }, { "line": "${findLine(d)}" } ]`;
+    }
+};
+const check_if = ifStatement => (macroIFCMPlist.includes(ifStatement) || macroIFlist.includes(ifStatement) || ifStatement === "IF_SOME"); // TODO: IF_SOME
+const expandIF = (ifInstr, ifTrue, ifFalse, annot, d) => {
+    const annotation = !!annot ? `, "annots": [ ${annot} ] ` : " ";
+    switch (ifInstr) {
+        case "IFCMPEQ":
+            return `[ { "prim": "COMPARE" }, { "prim": "EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFCMPGE":
+            return `[ { "prim": "COMPARE" }, { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFCMPGT":
+            return `[ { "prim": "COMPARE" }, { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFCMPLE":
+            return `[ { "prim": "COMPARE" }, { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFCMPLT":
+            return `[ { "prim": "COMPARE" }, { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFCMPNEQ":
+            return `[ { "prim": "COMPARE" }, { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFEQ":
+            return `[ { "prim":"EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFGE":
+            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFGT":
+            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFLE":
+            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFLT":
+            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IFNEQ":
+            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        case "IF_SOME":
+            return `[ { "prim": "IF_NONE", "args": [ [ ${ifFalse} ], [ ${ifTrue} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+        default:
+            return "";
+    }
+};
+const check_dip = dip => DIPmatcher.test(dip);
+const expandDIP = (dip, instruction, annot, d) => {
+    let t = "";
+    if (check_dip(dip)) {
+        const c = dip.length - 2;
+        for (let i = 0; i < c; i++) {
+            t += '[ { "prim": "DIP", "args": [ ';
+        }
+        t = `${t} [ ${instruction} ] ]`;
+        if (annot != null && !!annot) {
+            t = `${t}, "annots": [ ${annot} ]`;
+        }
+        t += " }]";
+        for (let i = 0; i < c - 1; i++) {
+            t += ` ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        return t;
+    }
+    throw new Error(`Unexpected parameter for DIP processing: ${dip}`);
+};
+const check_other = word => (word === "UNPAIR" || word === "UNPAPAIR"); // TODO: dynamic matching
+//UNPAIR and annotations follows a nonstandard format described in docs, and is dependent on the number of
+//annotations given to the command, right now we're hard coding to fix the multisig contract swiftly, but a
+//more general solution is required in the longterm.
+const expand_other = (word, annot, d) => {
+    if (word === "UNPAIR") {
+        if (annot == null) {
+            // return '[ [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ] ]';
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ {"prim": "CDR" } ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        else if (annot.length === 1) {
+            // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ]  } ] ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        else if (annot.length === 2) {
+            // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [${annot[1]}] } ] ]  } ] ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ { "prim": "CDR", "annots": [${annot[1]}] } ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        else {
+            return "";
+        }
+    }
+    if (word === "UNPAPAIR") {
+        if (annot == null) {
+            // return `[ [ { "prim": "DUP" },
+            //                { "prim": "CAR" },
+            //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
+            //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]]}]]]}]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] } ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        else {
+            // return `[ [ { "prim": "DUP" },
+            //                { "prim": "CAR" },
+            //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
+            //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]],"annots": [${annot}]}]]]}]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ], "annots": [ ${annot} ] } ] }, { "line": "${findLine(d)}" } ]`;
+        }
+    }
+};
+const checkSetCadr = s => macroSETCADRconst.test(s);
+const expandSetCadr = (word, annot, d) => nestSetCadr(word.slice(5, -1), d);
+const nestSetCadr = (r, d) => {
+    if (r.length === 0) {
+        return "";
+    }
+    const c = r.charAt(0);
+    if (r.length === 1) {
+        if (c === "A") {
+            return `[ { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+        }
+        else if (c === "D") {
+            return `[ { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%" ] }, { "line": "${findLine(d)}" } ]`;
+        }
+    }
+    if (c === "A") {
+        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CAR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+    }
+    else if (c === "D") {
+        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+    }
+};
+const checkKeyword = word => {
+    if (check_assert(word)) {
+        return true;
+    }
+    if (check_compare(word)) {
+        return true;
+    }
+    if (check_dip(word)) {
+        return true;
+    }
+    if (check_dup(word)) {
+        return true;
+    }
+    if (check_fail(word)) {
+        return true;
+    }
+    if (check_if(word)) {
+        return true;
+    }
+    if (checkC_R(word)) {
+        return true;
+    }
+    if (check_other(word)) {
+        return true;
+    }
+    if (checkSetCadr(word)) {
+        return true;
+    }
+};
+const expandKeyword = (word, annot, d) => {
+    if (checkC_R(word)) {
+        return expandC_R(word, annot, d);
+    }
+    if (check_assert(word)) {
+        return expand_assert(word, annot, d);
+    }
+    if (check_compare(word)) {
+        return expand_cmp(word, annot, d);
+    }
+    if (check_dip(word)) {
+        return expandDIP(word, null, annot, d);
+    }
+    if (check_dup(word)) {
+        return expand_dup(word, annot, d);
+    }
+    if (check_fail(word)) {
+        return expand_fail(word, annot, d);
+    }
+    if (check_if(word)) {
+        return expandIF(word, "", "", annot, d);
+    }
+    if (check_other(word)) {
+        return expand_other(word, annot, d);
+    }
+    if (checkSetCadr(word)) {
+        return expandSetCadr(word, annot, d);
+    }
+};
+/**
+ * Given a int, convert it to JSON.
+ * Example: "3" -> { "int": "3" }
+ */
+const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": "${findLine(d)}" }`;
+/**
+ * Given a string, convert it to JSON.
+ * Example: "string" -> "{ "string": "blah" }"
+ */
+const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
+/**
+ * Given a hex, convert it to JSON.
+ * Example: "0x123456" -> "{ "bytes": "123456" }"
+ */
+const hexToJson = d => `{ "bytes": ${d[0]}, "line": "${findLine(d)}" }`;
+/**
+ * Given a keyword, convert it to JSON.
+ * Example: "int" -> "{ "prim" : "int" }"
+ */
+const keywordToJson = d => {
+    const word = d[0].toString();
+    if (d.length === 1) {
+        if (checkKeyword(word)) {
+            return [expandKeyword(word, null, d)];
+        }
+        else {
+            return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
+        }
+    } else {
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            if (checkKeyword(word)) {
+                return [expandKeyword(word, annot, d)];
+            }
+            else {
+                return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            }
+        } else {
+            if (checkKeyword(word)) {
+                return [expandKeyword(word, null, d)];
+            }
+            else {
+                return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
             }
         }
-        },
-    {"name": "unsigned_decimal$ebnf$1", "symbols": [/[0-9]/]},
-    {"name": "unsigned_decimal$ebnf$1", "symbols": ["unsigned_decimal$ebnf$1", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "unsigned_decimal$ebnf$2$subexpression$1$ebnf$1", "symbols": [/[0-9]/]},
-    {"name": "unsigned_decimal$ebnf$2$subexpression$1$ebnf$1", "symbols": ["unsigned_decimal$ebnf$2$subexpression$1$ebnf$1", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "unsigned_decimal$ebnf$2$subexpression$1", "symbols": [{"literal":"."}, "unsigned_decimal$ebnf$2$subexpression$1$ebnf$1"]},
-    {"name": "unsigned_decimal$ebnf$2", "symbols": ["unsigned_decimal$ebnf$2$subexpression$1"], "postprocess": id},
-    {"name": "unsigned_decimal$ebnf$2", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "unsigned_decimal", "symbols": ["unsigned_decimal$ebnf$1", "unsigned_decimal$ebnf$2"], "postprocess": 
-        function(d) {
-            return parseFloat(
-                d[0].join("") +
-                (d[1] ? "."+d[1][1].join("") : "")
-            );
+    }
+};
+/**
+ * Given a keyword with one argument, convert it to JSON.
+ * Example: "option int" -> "{ prim: option, args: [int] }"
+ */
+const singleArgKeywordToJson = d => {
+    if (d.length > 3) {
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "decimal$ebnf$1", "symbols": [{"literal":"-"}], "postprocess": id},
-    {"name": "decimal$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "decimal$ebnf$2", "symbols": [/[0-9]/]},
-    {"name": "decimal$ebnf$2", "symbols": ["decimal$ebnf$2", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "decimal$ebnf$3$subexpression$1$ebnf$1", "symbols": [/[0-9]/]},
-    {"name": "decimal$ebnf$3$subexpression$1$ebnf$1", "symbols": ["decimal$ebnf$3$subexpression$1$ebnf$1", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "decimal$ebnf$3$subexpression$1", "symbols": [{"literal":"."}, "decimal$ebnf$3$subexpression$1$ebnf$1"]},
-    {"name": "decimal$ebnf$3", "symbols": ["decimal$ebnf$3$subexpression$1"], "postprocess": id},
-    {"name": "decimal$ebnf$3", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "decimal", "symbols": ["decimal$ebnf$1", "decimal$ebnf$2", "decimal$ebnf$3"], "postprocess": 
-        function(d) {
-            return parseFloat(
-                (d[0] || "") +
-                d[1].join("") +
-                (d[2] ? "."+d[2][1].join("") : "")
-            );
+    } else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+    }
+};
+const comparableTypeToJson = d => {
+    const annot = d[3].map(x => `"${x[1]}"`);
+    return `{ "prim": "${d[2]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+};
+const singleArgTypeKeywordWithParenToJson = d => {
+    const annot = d[3].map(x => `"${x[1]}"`);
+    return `{ "prim": "${d[2]}", "args": [ ${d[5]} ], "annots": [${annot}], "line": "${findLine(d)}" }`;
+};
+const singleArgInstrKeywordToJson = d => {
+    const word = `${d[0].toString()}`;
+    if (d[1].length > 0) {
+        const annot = d[1].map(x => `"${x[1]}"`);
+        if (check_dip(word)) {
+            return expandDIP(word, d[3], annot, d);
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "percentage", "symbols": ["decimal", {"literal":"%"}], "postprocess": 
-        function(d) {
-            return d[0]/100;
+    } else {
+        if (check_dip(word)) {
+            return expandDIP(word, d[3], null, d);
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "jsonfloat$ebnf$1", "symbols": [{"literal":"-"}], "postprocess": id},
-    {"name": "jsonfloat$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "jsonfloat$ebnf$2", "symbols": [/[0-9]/]},
-    {"name": "jsonfloat$ebnf$2", "symbols": ["jsonfloat$ebnf$2", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "jsonfloat$ebnf$3$subexpression$1$ebnf$1", "symbols": [/[0-9]/]},
-    {"name": "jsonfloat$ebnf$3$subexpression$1$ebnf$1", "symbols": ["jsonfloat$ebnf$3$subexpression$1$ebnf$1", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "jsonfloat$ebnf$3$subexpression$1", "symbols": [{"literal":"."}, "jsonfloat$ebnf$3$subexpression$1$ebnf$1"]},
-    {"name": "jsonfloat$ebnf$3", "symbols": ["jsonfloat$ebnf$3$subexpression$1"], "postprocess": id},
-    {"name": "jsonfloat$ebnf$3", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "jsonfloat$ebnf$4$subexpression$1$ebnf$1", "symbols": [/[+-]/], "postprocess": id},
-    {"name": "jsonfloat$ebnf$4$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "jsonfloat$ebnf$4$subexpression$1$ebnf$2", "symbols": [/[0-9]/]},
-    {"name": "jsonfloat$ebnf$4$subexpression$1$ebnf$2", "symbols": ["jsonfloat$ebnf$4$subexpression$1$ebnf$2", /[0-9]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "jsonfloat$ebnf$4$subexpression$1", "symbols": [/[eE]/, "jsonfloat$ebnf$4$subexpression$1$ebnf$1", "jsonfloat$ebnf$4$subexpression$1$ebnf$2"]},
-    {"name": "jsonfloat$ebnf$4", "symbols": ["jsonfloat$ebnf$4$subexpression$1"], "postprocess": id},
-    {"name": "jsonfloat$ebnf$4", "symbols": [], "postprocess": function(d) {return null;}},
-    {"name": "jsonfloat", "symbols": ["jsonfloat$ebnf$1", "jsonfloat$ebnf$2", "jsonfloat$ebnf$3", "jsonfloat$ebnf$4"], "postprocess": 
-        function(d) {
-            return parseFloat(
-                (d[0] || "") +
-                d[1].join("") +
-                (d[2] ? "."+d[2][1].join("") : "") +
-                (d[3] ? "e" + (d[3][1] || "+") + d[3][2].join("") : "")
-            );
+    }
+};
+const singleArgTypeKeywordToJson = d => {
+    const word = `${d[0].toString()}`;
+    const annot = d[1].map(x => `"${x[1]}"`);
+    if (check_dip(word)) {
+        return expandDIP(word, d[2], annot, d);
+    }
+    else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+    }
+};
+/**
+ * Given a keyword with one argument and parentheses, convert it to JSON.
+ * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
+ * Also: (option (mutez))
+ */
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4][d[4].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
+
+/**
+ * Given a keyword with two arguments, convert it into JSON.
+ * Example: "Pair unit instruction" -> "{ prim: Pair, args: [{prim: unit}, {prim: instruction}] }"
+ */
+const doubleArgKeywordToJson = d => {
+    if (d.length > 5) {
+        if (d[1].length > 0) {
+            const annot = d[1].map(x => `"${x[1]}"`);
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        } else {
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "dqstring$ebnf$1", "symbols": []},
-    {"name": "dqstring$ebnf$1", "symbols": ["dqstring$ebnf$1", "dstrchar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "dqstring", "symbols": [{"literal":"\""}, "dqstring$ebnf$1", {"literal":"\""}], "postprocess": function(d) {return d[1].join(""); }},
-    {"name": "sqstring$ebnf$1", "symbols": []},
-    {"name": "sqstring$ebnf$1", "symbols": ["sqstring$ebnf$1", "sstrchar"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "sqstring", "symbols": [{"literal":"'"}, "sqstring$ebnf$1", {"literal":"'"}], "postprocess": function(d) {return d[1].join(""); }},
-    {"name": "btstring$ebnf$1", "symbols": []},
-    {"name": "btstring$ebnf$1", "symbols": ["btstring$ebnf$1", /[^`]/], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "btstring", "symbols": [{"literal":"`"}, "btstring$ebnf$1", {"literal":"`"}], "postprocess": function(d) {return d[1].join(""); }},
-    {"name": "dstrchar", "symbols": [/[^\\"\n]/], "postprocess": id},
-    {"name": "dstrchar", "symbols": [{"literal":"\\"}, "strescape"], "postprocess": 
-        function(d) {
-            return JSON.parse("\""+d.join("")+"\"");
+    } else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]} ], "line": "${findLine(d)}" }`;
+    }
+};
+const doubleArgTypeKeywordToJson = d => {
+    const annot = d[1].map(x => `"${x[1]}"`);
+    return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+};
+const doubleArgParenKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[8]} ], "line": "${findLine(d)}" }`;
+const doubleArgInstrKeywordToJson = d => {
+    const word = `${d[0].toString()}`;
+    if (d[1].length > 0) {
+        const annot = d[1].map(x => `"${x[1]}"`);
+        if (check_if(word)) {
+            return expandIF(word, d[3], d[5], annot, d);
         }
-        },
-    {"name": "sstrchar", "symbols": [/[^\\'\n]/], "postprocess": id},
-    {"name": "sstrchar", "symbols": [{"literal":"\\"}, "strescape"], "postprocess": function(d) { return JSON.parse("\""+d.join("")+"\""); }},
-    {"name": "sstrchar$string$1", "symbols": [{"literal":"\\"}, {"literal":"'"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "sstrchar", "symbols": ["sstrchar$string$1"], "postprocess": function(d) {return "'"; }},
-    {"name": "strescape", "symbols": [/["\\/bfnrt]/], "postprocess": id},
-    {"name": "strescape", "symbols": [{"literal":"u"}, /[a-fA-F0-9]/, /[a-fA-F0-9]/, /[a-fA-F0-9]/, /[a-fA-F0-9]/], "postprocess": 
-        function(d) {
-            return d.join("");
+        else {
+            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
         }
-        },
-    {"name": "main", "symbols": ["parameter", "_", "storage", "_", "code", "_"], "postprocess": function(d) { return JSON.stringify({"parameter": d[0], "storage": d[2], "code": d[4]}) }},
-    {"name": "parameter$string$1", "symbols": [{"literal":"p"}, {"literal":"a"}, {"literal":"r"}, {"literal":"a"}, {"literal":"m"}, {"literal":"e"}, {"literal":"t"}, {"literal":"e"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "parameter", "symbols": ["parameter$string$1", "__", "type", "_", {"literal":";"}], "postprocess": function(d) { return d[2] }},
-    {"name": "storage$string$1", "symbols": [{"literal":"s"}, {"literal":"t"}, {"literal":"o"}, {"literal":"r"}, {"literal":"a"}, {"literal":"g"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "storage", "symbols": ["storage$string$1", "__", "type", "_", {"literal":";"}], "postprocess": function(d) { return d[2] }},
-    {"name": "code$string$1", "symbols": [{"literal":"c"}, {"literal":"o"}, {"literal":"d"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "code$ebnf$1", "symbols": []},
-    {"name": "code$ebnf$1", "symbols": ["code$ebnf$1", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "code", "symbols": ["code$string$1", "_", {"literal":"{"}, "_", "code$ebnf$1", {"literal":"}"}, "_", {"literal":";"}], "postprocess": code},
-    {"name": "ins", "symbols": ["instruction", "_", {"literal":";"}, "_"], "postprocess": ins},
-    {"name": "type$string$1", "symbols": [{"literal":"a"}, {"literal":"d"}, {"literal":"d"}, {"literal":"r"}, {"literal":"e"}, {"literal":"s"}, {"literal":"s"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$1"], "postprocess": function(d) { return 'address' }},
-    {"name": "type$string$2", "symbols": [{"literal":"b"}, {"literal":"i"}, {"literal":"g"}, {"literal":"_"}, {"literal":"m"}, {"literal":"a"}, {"literal":"p"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": [{"literal":"("}, "_", "type$string$2", "__", "type", "__", "type", "_", {"literal":")"}], "postprocess": function(d) { return [ "big_map", [ [ d[4][0], d[6][0] ] ] ] }},
-    {"name": "type$string$3", "symbols": [{"literal":"b"}, {"literal":"l"}, {"literal":"s"}, {"literal":"1"}, {"literal":"2"}, {"literal":"_"}, {"literal":"3"}, {"literal":"8"}, {"literal":"1"}, {"literal":"_"}, {"literal":"f"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$3"], "postprocess": function(d) { return 'bls12_381_fr' }},
-    {"name": "type$string$4", "symbols": [{"literal":"b"}, {"literal":"l"}, {"literal":"s"}, {"literal":"1"}, {"literal":"2"}, {"literal":"_"}, {"literal":"3"}, {"literal":"8"}, {"literal":"1"}, {"literal":"_"}, {"literal":"g"}, {"literal":"1"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$4"], "postprocess": function(d) { return 'bls12_381_g1' }},
-    {"name": "type$string$5", "symbols": [{"literal":"b"}, {"literal":"l"}, {"literal":"s"}, {"literal":"1"}, {"literal":"2"}, {"literal":"_"}, {"literal":"3"}, {"literal":"8"}, {"literal":"1"}, {"literal":"_"}, {"literal":"g"}, {"literal":"2"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$5"], "postprocess": function(d) { return 'bls12_381_g2' }},
-    {"name": "type$string$6", "symbols": [{"literal":"b"}, {"literal":"o"}, {"literal":"o"}, {"literal":"l"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$6"], "postprocess": function(d) { return 'bool' }},
-    {"name": "type$string$7", "symbols": [{"literal":"b"}, {"literal":"y"}, {"literal":"t"}, {"literal":"e"}, {"literal":"s"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$7"], "postprocess": function(d) { return 'bytes' }},
-    {"name": "type$string$8", "symbols": [{"literal":"c"}, {"literal":"h"}, {"literal":"a"}, {"literal":"i"}, {"literal":"n"}, {"literal":"_"}, {"literal":"i"}, {"literal":"d"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$8"], "postprocess": function(d) { return 'chain_id' }},
-    {"name": "type$string$9", "symbols": [{"literal":"c"}, {"literal":"o"}, {"literal":"n"}, {"literal":"t"}, {"literal":"r"}, {"literal":"a"}, {"literal":"c"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$9", "__", "type"], "postprocess": function(d) { return { 'contract': d[2][0] } }},
-    {"name": "type$string$10", "symbols": [{"literal":"i"}, {"literal":"n"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$10"], "postprocess": function(d) { return 'int' }},
-    {"name": "type$string$11", "symbols": [{"literal":"k"}, {"literal":"e"}, {"literal":"y"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$11"], "postprocess": function(d) { return 'key' }},
-    {"name": "type$string$12", "symbols": [{"literal":"k"}, {"literal":"e"}, {"literal":"y"}, {"literal":"_"}, {"literal":"h"}, {"literal":"a"}, {"literal":"s"}, {"literal":"h"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$12"], "postprocess": function(d) { return 'key_hash' }},
-    {"name": "type$string$13", "symbols": [{"literal":"l"}, {"literal":"a"}, {"literal":"m"}, {"literal":"b"}, {"literal":"d"}, {"literal":"a"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$13"], "postprocess": function(d) { return 'lambda' }},
-    {"name": "type$string$14", "symbols": [{"literal":"l"}, {"literal":"i"}, {"literal":"s"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$14", "__", "type"], "postprocess": function(d) { return [ "list", [ [ d[4][0], d[6][0] ] ] ] }},
-    {"name": "type$string$15", "symbols": [{"literal":"m"}, {"literal":"a"}, {"literal":"p"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$15", "__", "type", "__", "type"], "postprocess": function(d) { return [ "map", [ [ d[4][0], d[6][0] ] ] ] }},
-    {"name": "type$string$16", "symbols": [{"literal":"m"}, {"literal":"u"}, {"literal":"t"}, {"literal":"e"}, {"literal":"z"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$16"], "postprocess": function(d) { return 'mutez' }},
-    {"name": "type$string$17", "symbols": [{"literal":"n"}, {"literal":"a"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$17"], "postprocess": function(d) { return 'nat' }},
-    {"name": "type$string$18", "symbols": [{"literal":"n"}, {"literal":"e"}, {"literal":"v"}, {"literal":"e"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$18"], "postprocess": function(d) { return 'never' }},
-    {"name": "type$string$19", "symbols": [{"literal":"o"}, {"literal":"p"}, {"literal":"e"}, {"literal":"r"}, {"literal":"a"}, {"literal":"t"}, {"literal":"i"}, {"literal":"o"}, {"literal":"n"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$19"], "postprocess": function(d) { return 'operation' }},
-    {"name": "type$string$20", "symbols": [{"literal":"o"}, {"literal":"p"}, {"literal":"t"}, {"literal":"i"}, {"literal":"o"}, {"literal":"n"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$20", "__", "type"], "postprocess": function(d) { return { 'option': d[2][0] } }},
-    {"name": "type$string$21", "symbols": [{"literal":"o"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": [{"literal":"("}, "_", "type$string$21", "__", "type", "__", "type", "_", {"literal":")"}], "postprocess": function(d) { return [ "or", [ [ d[4][0], d[6][0] ] ] ] }},
-    {"name": "type$string$22", "symbols": [{"literal":"p"}, {"literal":"a"}, {"literal":"i"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": [{"literal":"("}, "_", "type$string$22", "__", "type", "__", "type", "_", {"literal":")"}], "postprocess": function(d) { return [ "pair", [ [ d[4][0], d[6][0] ] ] ] }},
-    {"name": "type$string$23", "symbols": [{"literal":"s"}, {"literal":"a"}, {"literal":"p"}, {"literal":"l"}, {"literal":"i"}, {"literal":"n"}, {"literal":"g"}, {"literal":"_"}, {"literal":"s"}, {"literal":"t"}, {"literal":"a"}, {"literal":"t"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$23", "__", "type"], "postprocess": function(d) { return { 'sapling_state': d[2][0] } }},
-    {"name": "type$string$24", "symbols": [{"literal":"s"}, {"literal":"a"}, {"literal":"p"}, {"literal":"l"}, {"literal":"i"}, {"literal":"n"}, {"literal":"g"}, {"literal":"_"}, {"literal":"t"}, {"literal":"r"}, {"literal":"a"}, {"literal":"n"}, {"literal":"s"}, {"literal":"a"}, {"literal":"c"}, {"literal":"t"}, {"literal":"i"}, {"literal":"o"}, {"literal":"n"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$24", "__", "type"], "postprocess": function(d) { return { 'sapling_transaction': d[2][0] } }},
-    {"name": "type$string$25", "symbols": [{"literal":"s"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$25", "__", "type"], "postprocess": function(d) { return { 'set': d[2][0] } }},
-    {"name": "type$string$26", "symbols": [{"literal":"s"}, {"literal":"i"}, {"literal":"g"}, {"literal":"n"}, {"literal":"a"}, {"literal":"t"}, {"literal":"u"}, {"literal":"r"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$26"], "postprocess": function(d) { return 'signature' }},
-    {"name": "type$string$27", "symbols": [{"literal":"s"}, {"literal":"t"}, {"literal":"r"}, {"literal":"i"}, {"literal":"n"}, {"literal":"g"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$27"], "postprocess": function(d) { return 'string' }},
-    {"name": "type$string$28", "symbols": [{"literal":"t"}, {"literal":"i"}, {"literal":"c"}, {"literal":"k"}, {"literal":"e"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$28", "__", "type"], "postprocess": function(d) { return { 'ticket': d[2][0] } }},
-    {"name": "type$string$29", "symbols": [{"literal":"t"}, {"literal":"i"}, {"literal":"m"}, {"literal":"e"}, {"literal":"s"}, {"literal":"t"}, {"literal":"a"}, {"literal":"m"}, {"literal":"p"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$29"], "postprocess": function(d) { return 'timestamp' }},
-    {"name": "type$string$30", "symbols": [{"literal":"u"}, {"literal":"n"}, {"literal":"i"}, {"literal":"t"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "type", "symbols": ["type$string$30"], "postprocess": function(d) { return 'unit' }},
-    {"name": "instruction$string$1", "symbols": [{"literal":"A"}, {"literal":"B"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$1"]},
-    {"name": "instruction$string$2", "symbols": [{"literal":"A"}, {"literal":"D"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$2"]},
-    {"name": "instruction$string$3", "symbols": [{"literal":"A"}, {"literal":"D"}, {"literal":"D"}, {"literal":"R"}, {"literal":"E"}, {"literal":"S"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$3"]},
-    {"name": "instruction$string$4", "symbols": [{"literal":"A"}, {"literal":"M"}, {"literal":"O"}, {"literal":"U"}, {"literal":"N"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$4"]},
-    {"name": "instruction$string$5", "symbols": [{"literal":"A"}, {"literal":"N"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$5"]},
-    {"name": "instruction$string$6", "symbols": [{"literal":"A"}, {"literal":"P"}, {"literal":"P"}, {"literal":"L"}, {"literal":"Y"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$6"]},
-    {"name": "instruction$string$7", "symbols": [{"literal":"B"}, {"literal":"A"}, {"literal":"L"}, {"literal":"A"}, {"literal":"N"}, {"literal":"C"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$7"]},
-    {"name": "instruction$string$8", "symbols": [{"literal":"B"}, {"literal":"L"}, {"literal":"A"}, {"literal":"K"}, {"literal":"E"}, {"literal":"2"}, {"literal":"B"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$8"]},
-    {"name": "instruction$string$9", "symbols": [{"literal":"C"}, {"literal":"A"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$9"]},
-    {"name": "instruction$string$10", "symbols": [{"literal":"C"}, {"literal":"D"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$10"]},
-    {"name": "instruction$string$11", "symbols": [{"literal":"C"}, {"literal":"H"}, {"literal":"A"}, {"literal":"I"}, {"literal":"N"}, {"literal":"_"}, {"literal":"I"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$11"]},
-    {"name": "instruction$string$12", "symbols": [{"literal":"C"}, {"literal":"H"}, {"literal":"E"}, {"literal":"C"}, {"literal":"K"}, {"literal":"_"}, {"literal":"S"}, {"literal":"I"}, {"literal":"G"}, {"literal":"N"}, {"literal":"A"}, {"literal":"T"}, {"literal":"U"}, {"literal":"R"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$12"]},
-    {"name": "instruction$string$13", "symbols": [{"literal":"C"}, {"literal":"O"}, {"literal":"M"}, {"literal":"P"}, {"literal":"A"}, {"literal":"R"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$13"]},
-    {"name": "instruction$string$14", "symbols": [{"literal":"C"}, {"literal":"O"}, {"literal":"N"}, {"literal":"C"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$14"]},
-    {"name": "instruction$string$15", "symbols": [{"literal":"C"}, {"literal":"O"}, {"literal":"N"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$15"]},
-    {"name": "instruction$string$16", "symbols": [{"literal":"C"}, {"literal":"O"}, {"literal":"N"}, {"literal":"T"}, {"literal":"R"}, {"literal":"A"}, {"literal":"C"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$16", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$17", "symbols": [{"literal":"C"}, {"literal":"R"}, {"literal":"E"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}, {"literal":"_"}, {"literal":"C"}, {"literal":"O"}, {"literal":"N"}, {"literal":"T"}, {"literal":"R"}, {"literal":"A"}, {"literal":"C"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$string$18", "symbols": [{"literal":"p"}, {"literal":"a"}, {"literal":"r"}, {"literal":"a"}, {"literal":"m"}, {"literal":"e"}, {"literal":"t"}, {"literal":"e"}, {"literal":"r"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$string$19", "symbols": [{"literal":"s"}, {"literal":"t"}, {"literal":"o"}, {"literal":"r"}, {"literal":"a"}, {"literal":"g"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$string$20", "symbols": [{"literal":"c"}, {"literal":"o"}, {"literal":"d"}, {"literal":"e"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$17", "__", {"literal":"{"}, "_", "instruction$string$18", "__", "type", "_", {"literal":";"}, "_", "instruction$string$19", "__", "type", "_", {"literal":";"}, "_", "instruction$string$20", "__", "instruction", "_", {"literal":"}"}]},
-    {"name": "instruction$string$21", "symbols": [{"literal":"D"}, {"literal":"I"}, {"literal":"G"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$21", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$22", "symbols": [{"literal":"D"}, {"literal":"I"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$22", "_", {"literal":"{"}, "_", "ins", {"literal":"}"}], "postprocess": dip},
-    {"name": "instruction$string$23", "symbols": [{"literal":"D"}, {"literal":"I"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$23", "__", "int", "__", {"literal":"{"}, "_", "ins", {"literal":"}"}], "postprocess": dipi},
-    {"name": "instruction$string$24", "symbols": [{"literal":"D"}, {"literal":"R"}, {"literal":"O"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$24"]},
-    {"name": "instruction$string$25", "symbols": [{"literal":"D"}, {"literal":"R"}, {"literal":"O"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$25", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$26", "symbols": [{"literal":"D"}, {"literal":"U"}, {"literal":"G"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$26", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$27", "symbols": [{"literal":"D"}, {"literal":"U"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$27"]},
-    {"name": "instruction$string$28", "symbols": [{"literal":"D"}, {"literal":"U"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$28", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$29", "symbols": [{"literal":"E"}, {"literal":"D"}, {"literal":"I"}, {"literal":"V"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$29"]},
-    {"name": "instruction$string$30", "symbols": [{"literal":"E"}, {"literal":"M"}, {"literal":"P"}, {"literal":"T"}, {"literal":"Y"}, {"literal":"_"}, {"literal":"B"}, {"literal":"I"}, {"literal":"G"}, {"literal":"_"}, {"literal":"M"}, {"literal":"A"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$30", "__", "type", "__", "type"]},
-    {"name": "instruction$string$31", "symbols": [{"literal":"E"}, {"literal":"M"}, {"literal":"P"}, {"literal":"T"}, {"literal":"Y"}, {"literal":"_"}, {"literal":"M"}, {"literal":"A"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$31", "__", "type", "__", "type"]},
-    {"name": "instruction$string$32", "symbols": [{"literal":"E"}, {"literal":"M"}, {"literal":"P"}, {"literal":"T"}, {"literal":"Y"}, {"literal":"_"}, {"literal":"S"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$32", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$33", "symbols": [{"literal":"E"}, {"literal":"Q"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$33"]},
-    {"name": "instruction$string$34", "symbols": [{"literal":"E"}, {"literal":"X"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$34"]},
-    {"name": "instruction$string$35", "symbols": [{"literal":"F"}, {"literal":"A"}, {"literal":"I"}, {"literal":"L"}, {"literal":"W"}, {"literal":"I"}, {"literal":"T"}, {"literal":"H"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$35"]},
-    {"name": "instruction$string$36", "symbols": [{"literal":"G"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$36"]},
-    {"name": "instruction$string$37", "symbols": [{"literal":"G"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$37"]},
-    {"name": "instruction$string$38", "symbols": [{"literal":"G"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$38", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$39", "symbols": [{"literal":"G"}, {"literal":"E"}, {"literal":"T"}, {"literal":"_"}, {"literal":"A"}, {"literal":"N"}, {"literal":"D"}, {"literal":"_"}, {"literal":"U"}, {"literal":"P"}, {"literal":"D"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$39"]},
-    {"name": "instruction$string$40", "symbols": [{"literal":"G"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$40"]},
-    {"name": "instruction$string$41", "symbols": [{"literal":"H"}, {"literal":"A"}, {"literal":"S"}, {"literal":"H"}, {"literal":"_"}, {"literal":"K"}, {"literal":"E"}, {"literal":"Y"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$41"]},
-    {"name": "instruction$string$42", "symbols": [{"literal":"I"}, {"literal":"F"}], "postprocess": function joiner(d) {return d.join('');}},
+    } else {
+        if (check_if(word)) {
+            return expandIF(word, d[3], d[5], null, d);
+        }
+        else {
+            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "line": "${findLine(d)}" }`;
+        }
+    }
+};
+/**
+ * Given a keyword with two arguments and parentheses, convert it into JSON.
+ * Example: "(Pair unit instruction)" -> "{ prim: Pair, args: [{prim: unit}, {prim: instruction}] }"
+ */
+const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]}, ${d[6]} ], "line": "${findLine(d)}" }`;
+/**
+ * Given a keyword with three arguments, convert it into JSON.
+ * Example: "LAMBDA key unit {DIP;}" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
+ */
+const tripleArgKeyWordToJson = d => {
+    if (d[1].length > 0) {
+        const annot = d[1].map(x => `"${x[1]}"`);
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+    } else {
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "line": "${findLine(d)}" }`;
+    }
+};
+/**
+ * Given a keyword with three arguments and parentheses, convert it into JSON.
+ * Example: "(LAMBDA key unit {DIP;})" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
+ */
+const tripleArgKeyWordWithParenToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, ${d[6]} ], "line": "${findLine(d)}" }`;
+const nestedArrayChecker = x => {
+    if (Array.isArray(x) && Array.isArray(x[0])) { // handles double array nesting
+        return x[0];
+    }
+    else {
+        return x;
+    }
+};
+/**
+ * Given a list of michelson instructions, convert it into JSON.
+ * Example: "{CAR; NIL operation; PAIR;}" ->
+ * [ '{ prim: CAR }',
+ * '{ prim: NIL, args: [{ prim: operation }] }',
+ * '{ prim: PAIR }' ]
+ */
+const instructionSetToJsonNoSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x));
+        } catch (e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonNoSemi(d[2], false).concat(d[6].map(x => x[0]).concat(d[7]).map(x => nestedArrayChecker(x)));
+    }
+};
+const instructionSetToJsonSemi = (d, isNested) => {
+    if (!isNested) {
+        try {
+            return d[2].map(x => x[0]).map(x => nestedArrayChecker(x));
+        } catch(e) {
+            return d;
+        }
+    } else {
+        return instructionSetToJsonSemi(d[2], false).concat(d[6].map(x => x[0]).map(x => nestedArrayChecker(x)));
+    }
+};
+/**
+ * parameter, storage, code
+ */
+//const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
+const scriptToJson = (p, s, c) => `[ ${p}, ${s}, { "prim": "code", "args": [ ${c} ] } ]`;
+
+const doubleArgTypeKeywordWithParenToJson = d => {
+    const annot = d[3].map(x => `"${x[1]}"`);
+    return `{ "prim": "${d[2]}", "args": [ ${d[5]}, ${d[7]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+};
+const pushToJson = d => {
+    return `{ "prim": "${d[0]}", "args": [ ${d[2]}, [] ], "line": "${findLine(d)}" }`;
+};
+
+const dipnToJson = d => (d.length > 4) ? `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" }, [ ${d[4]} ] ], "line": "${findLine(d)}" }` : `{ "prim": "${d[0][0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+const dignToJson = d => `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" } ], "line": "${findLine(d)}" }`;
+const dropnToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ], "line": "${findLine(d)}" }`;
+// const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ [ ${d[8]} ] ] } ] ] }`;
+const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ], "line": "${findLine(d)}" }`;
+const instructionListToJson = d => {
+    const instructionOne = [d[2]];
+    const instructionList = d[3].map(x => x[3]);
+    return instructionOne.concat(instructionList).map(x => nestedArrayChecker(x));
+};
+
+const isIterable = obj => {
+    // checks for null and undefined
+    if (obj == null) {
+        return false;
+    }
+    return typeof obj[Symbol.iterator] === "function";
+};
+
+const findLine = d => {
+    if (!isIterable(d)) {
+        return "-1";
+    }
+    const lineNums = new Set();
+    for (const i of d) {
+        if (i != null && i.hasOwnProperty("line") && !isNaN(parseInt(i.line))) {
+            lineNums.add(i.line);
+        }
+    }
+    if (lineNums.size > 1) {
+        var output = "[ ";
+        for (const i of lineNums) {
+            output = output.concat(i).concat(", ");
+        }
+        output = output.substring(0, output.length - 2).concat(" ]");
+        return output;
+    } else if (lineNums.size === 1) {
+        return lineNums.values().next().value;
+    } else {
+        return "-1";
+    }
+};
+var grammar = {
+    Lexer: lexer,
+    ParserRules: [
+    {"name": "main", "symbols": ["_", "parameter", "_", "storage", "_", "code", "_"], "postprocess": function (d) { return scriptToJson(d[1], d[3], d[5]); }},
+    {"name": "main", "symbols": ["_", "parameter", "_", "code", "_", "storage", "_"], "postprocess": function (d) { return scriptToJson(d[1], d[5], d[3]); }},
+    {"name": "main", "symbols": ["_", "code", "_", "parameter", "_", "storage", "_"], "postprocess": function (d) { return scriptToJson(d[3], d[5], d[1]); }},
+    {"name": "main", "symbols": ["_", "code", "_", "storage", "_", "parameter", "_"], "postprocess": function (d) { return scriptToJson(d[5], d[3], d[1]); }},
+    {"name": "main", "symbols": ["_", "storage", "_", "parameter", "_", "code", "_"], "postprocess": function (d) { return scriptToJson(d[3], d[1], d[5]); }},
+    {"name": "main", "symbols": ["_", "storage", "_", "code", "_", "parameter", "_"], "postprocess": function (d) { return scriptToJson(d[5], d[1], d[3]); }},
+    {"name": "parameter$ebnf$1", "symbols": []},
+    {"name": "parameter$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "parameter$ebnf$1", "symbols": ["parameter$ebnf$1", "parameter$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "parameter", "symbols": [(lexer.has("parameter") ? {type: "parameter"} : parameter), "parameter$ebnf$1", "__", "type", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": singleArgKeywordToJson},
+    {"name": "storage$ebnf$1", "symbols": []},
+    {"name": "storage$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "storage$ebnf$1", "symbols": ["storage$ebnf$1", "storage$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "storage", "symbols": [(lexer.has("storage") ? {type: "storage"} : storage), "storage$ebnf$1", "__", "type", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": singleArgKeywordToJson},
+    {"name": "code$ebnf$1$subexpression$1", "symbols": ["_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)]},
+    {"name": "code$ebnf$1", "symbols": ["code$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "code$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "code", "symbols": [(lexer.has("code") ? {type: "code"} : code), "_", "subInstruction", "code$ebnf$1"], "postprocess": function (d) { return d[2]; }},
+    {"name": "code", "symbols": [(lexer.has("code") ? {type: "code"} : code), "_", (lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace), "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": function (d) { return "code {}"; }},
+    {"name": "type$ebnf$1", "symbols": []},
+    {"name": "type$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$1", "symbols": ["type$ebnf$1", "type$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("comparableType") ? {type: "comparableType"} : comparableType), "type$ebnf$1"], "postprocess": keywordToJson},
+    {"name": "type$ebnf$2", "symbols": []},
+    {"name": "type$ebnf$2$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$2", "symbols": ["type$ebnf$2", "type$ebnf$2$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("constantType") ? {type: "constantType"} : constantType), "type$ebnf$2"], "postprocess": keywordToJson},
+    {"name": "type$ebnf$3", "symbols": []},
+    {"name": "type$ebnf$3$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$3", "symbols": ["type$ebnf$3", "type$ebnf$3$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("singleArgType") ? {type: "singleArgType"} : singleArgType), "type$ebnf$3", "__", "type"], "postprocess": singleArgKeywordToJson},
+    {"name": "type", "symbols": [(lexer.has("doubleArgType") ? {type: "doubleArgType"} : doubleArgType), "__", "type", "__", "type"], "postprocess": doubleArgKeywordToJson},
+    {"name": "type$ebnf$4", "symbols": []},
+    {"name": "type$ebnf$4$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$4", "symbols": ["type$ebnf$4", "type$ebnf$4$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("comparableType") ? {type: "comparableType"} : comparableType), "type$ebnf$4", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": comparableTypeToJson},
+    {"name": "type$ebnf$5", "symbols": []},
+    {"name": "type$ebnf$5$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$5", "symbols": ["type$ebnf$5", "type$ebnf$5$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("constantType") ? {type: "constantType"} : constantType), "type$ebnf$5", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": comparableTypeToJson},
+    {"name": "type$ebnf$6", "symbols": []},
+    {"name": "type$ebnf$6$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$6", "symbols": ["type$ebnf$6", "type$ebnf$6$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("singleArgType") ? {type: "singleArgType"} : singleArgType), "type$ebnf$6", "__", "type", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": singleArgTypeKeywordWithParenToJson},
+    {"name": "type$ebnf$7", "symbols": []},
+    {"name": "type$ebnf$7$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "type$ebnf$7", "symbols": ["type$ebnf$7", "type$ebnf$7$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "type", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("doubleArgType") ? {type: "doubleArgType"} : doubleArgType), "type$ebnf$7", "__", "type", "__", "type", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": doubleArgTypeKeywordWithParenToJson},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return ""; }},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return d[2]; }},
+    {"name": "subInstruction$ebnf$1$subexpression$1$subexpression$1$ebnf$1$subexpression$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$1$subexpression$1$subexpression$1$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$1$subexpression$1$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$1$subexpression$1$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction$ebnf$1$subexpression$1$subexpression$1", "symbols": ["subInstruction", "_", "subInstruction$ebnf$1$subexpression$1$subexpression$1$ebnf$1"]},
+    {"name": "subInstruction$ebnf$1$subexpression$1", "symbols": ["subInstruction$ebnf$1$subexpression$1$subexpression$1"]},
+    {"name": "subInstruction$ebnf$1$subexpression$1$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$1$subexpression$1", "symbols": ["subInstruction$ebnf$1$subexpression$1$subexpression$2"]},
+    {"name": "subInstruction$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$1"]},
+    {"name": "subInstruction$ebnf$1$subexpression$2$subexpression$1$ebnf$1$subexpression$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$1$subexpression$2$subexpression$1$ebnf$1", "symbols": ["subInstruction$ebnf$1$subexpression$2$subexpression$1$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$1$subexpression$2$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction$ebnf$1$subexpression$2$subexpression$1", "symbols": ["subInstruction", "_", "subInstruction$ebnf$1$subexpression$2$subexpression$1$ebnf$1"]},
+    {"name": "subInstruction$ebnf$1$subexpression$2", "symbols": ["subInstruction$ebnf$1$subexpression$2$subexpression$1"]},
+    {"name": "subInstruction$ebnf$1$subexpression$2$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$1$subexpression$2", "symbols": ["subInstruction$ebnf$1$subexpression$2$subexpression$2"]},
+    {"name": "subInstruction$ebnf$1", "symbols": ["subInstruction$ebnf$1", "subInstruction$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$1", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!!"; }},
+    {"name": "subInstruction$ebnf$2$subexpression$1$subexpression$1$ebnf$1$subexpression$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$2$subexpression$1$subexpression$1$ebnf$1", "symbols": ["subInstruction$ebnf$2$subexpression$1$subexpression$1$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$2$subexpression$1$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction$ebnf$2$subexpression$1$subexpression$1", "symbols": ["subInstruction", "_", "subInstruction$ebnf$2$subexpression$1$subexpression$1$ebnf$1"]},
+    {"name": "subInstruction$ebnf$2$subexpression$1", "symbols": ["subInstruction$ebnf$2$subexpression$1$subexpression$1"]},
+    {"name": "subInstruction$ebnf$2$subexpression$1$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$2$subexpression$1", "symbols": ["subInstruction$ebnf$2$subexpression$1$subexpression$2"]},
+    {"name": "subInstruction$ebnf$2", "symbols": ["subInstruction$ebnf$2$subexpression$1"]},
+    {"name": "subInstruction$ebnf$2$subexpression$2$subexpression$1$ebnf$1$subexpression$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$2$subexpression$2$subexpression$1$ebnf$1", "symbols": ["subInstruction$ebnf$2$subexpression$2$subexpression$1$ebnf$1$subexpression$1"], "postprocess": id},
+    {"name": "subInstruction$ebnf$2$subexpression$2$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "subInstruction$ebnf$2$subexpression$2$subexpression$1", "symbols": ["subInstruction", "_", "subInstruction$ebnf$2$subexpression$2$subexpression$1$ebnf$1"]},
+    {"name": "subInstruction$ebnf$2$subexpression$2", "symbols": ["subInstruction$ebnf$2$subexpression$2$subexpression$1"]},
+    {"name": "subInstruction$ebnf$2$subexpression$2$subexpression$2", "symbols": ["instruction", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subInstruction$ebnf$2$subexpression$2", "symbols": ["subInstruction$ebnf$2$subexpression$2$subexpression$2"]},
+    {"name": "subInstruction$ebnf$2", "symbols": ["subInstruction$ebnf$2", "subInstruction$ebnf$2$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subInstruction", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subInstruction$ebnf$2", "instruction", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO!!!"; }},
     {"name": "instruction$ebnf$1", "symbols": []},
-    {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction$ebnf$1$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$1", "symbols": ["instruction$ebnf$1", "instruction$ebnf$1$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$1"], "postprocess": keywordToJson},
     {"name": "instruction$ebnf$2", "symbols": []},
-    {"name": "instruction$ebnf$2", "symbols": ["instruction$ebnf$2", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$42", "_", {"literal":"{"}, "_", "instruction$ebnf$1", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$2", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$43", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"_"}, {"literal":"C"}, {"literal":"O"}, {"literal":"N"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "instruction$ebnf$2$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$2", "symbols": ["instruction$ebnf$2", "instruction$ebnf$2$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$2", "_", "subInstruction"], "postprocess": singleArgInstrKeywordToJson},
     {"name": "instruction$ebnf$3", "symbols": []},
-    {"name": "instruction$ebnf$3", "symbols": ["instruction$ebnf$3", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction$ebnf$3$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$3", "symbols": ["instruction$ebnf$3", "instruction$ebnf$3$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$3", "__", "type"], "postprocess": singleArgKeywordToJson},
     {"name": "instruction$ebnf$4", "symbols": []},
-    {"name": "instruction$ebnf$4", "symbols": ["instruction$ebnf$4", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$43", "_", {"literal":"{"}, "_", "instruction$ebnf$3", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$4", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$44", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"_"}, {"literal":"L"}, {"literal":"E"}, {"literal":"F"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "instruction$ebnf$4$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$4", "symbols": ["instruction$ebnf$4", "instruction$ebnf$4$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$4", "__", "data"], "postprocess": singleArgKeywordToJson},
     {"name": "instruction$ebnf$5", "symbols": []},
-    {"name": "instruction$ebnf$5", "symbols": ["instruction$ebnf$5", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction$ebnf$5$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$5", "symbols": ["instruction$ebnf$5", "instruction$ebnf$5$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$5", "__", "type", "__", "type", "_", "subInstruction"], "postprocess": tripleArgKeyWordToJson},
     {"name": "instruction$ebnf$6", "symbols": []},
-    {"name": "instruction$ebnf$6", "symbols": ["instruction$ebnf$6", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$44", "_", {"literal":"{"}, "_", "instruction$ebnf$5", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$6", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$45", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"_"}, {"literal":"N"}, {"literal":"O"}, {"literal":"N"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "instruction$ebnf$6$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$6", "symbols": ["instruction$ebnf$6", "instruction$ebnf$6$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$6", "_", "subInstruction", "_", "subInstruction"], "postprocess": doubleArgInstrKeywordToJson},
     {"name": "instruction$ebnf$7", "symbols": []},
-    {"name": "instruction$ebnf$7", "symbols": ["instruction$ebnf$7", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction$ebnf$7$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$7", "symbols": ["instruction$ebnf$7", "instruction$ebnf$7$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": ["instructions", "instruction$ebnf$7", "__", "type", "__", "type"], "postprocess": doubleArgKeywordToJson},
     {"name": "instruction$ebnf$8", "symbols": []},
-    {"name": "instruction$ebnf$8", "symbols": ["instruction$ebnf$8", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$45", "_", {"literal":"{"}, "_", "instruction$ebnf$7", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$8", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$46", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"_"}, {"literal":"S"}, {"literal":"O"}, {"literal":"M"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$ebnf$9", "symbols": []},
-    {"name": "instruction$ebnf$9", "symbols": ["instruction$ebnf$9", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction$ebnf$10", "symbols": []},
-    {"name": "instruction$ebnf$10", "symbols": ["instruction$ebnf$10", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$46", "_", {"literal":"{"}, "_", "instruction$ebnf$9", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$10", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$47", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"C"}, {"literal":"M"}, {"literal":"P"}, {"literal":"G"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$ebnf$11", "symbols": []},
-    {"name": "instruction$ebnf$11", "symbols": ["instruction$ebnf$11", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction$ebnf$12", "symbols": []},
-    {"name": "instruction$ebnf$12", "symbols": ["instruction$ebnf$12", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$47", "_", {"literal":"{"}, "_", "instruction$ebnf$11", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$12", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$48", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"C"}, {"literal":"M"}, {"literal":"P"}, {"literal":"G"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$ebnf$13", "symbols": []},
-    {"name": "instruction$ebnf$13", "symbols": ["instruction$ebnf$13", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction$ebnf$14", "symbols": []},
-    {"name": "instruction$ebnf$14", "symbols": ["instruction$ebnf$14", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$48", "_", {"literal":"{"}, "_", "instruction$ebnf$13", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$14", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$49", "symbols": [{"literal":"I"}, {"literal":"F"}, {"literal":"C"}, {"literal":"M"}, {"literal":"P"}, {"literal":"L"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction$ebnf$15", "symbols": []},
-    {"name": "instruction$ebnf$15", "symbols": ["instruction$ebnf$15", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction$ebnf$16", "symbols": []},
-    {"name": "instruction$ebnf$16", "symbols": ["instruction$ebnf$16", "ins"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
-    {"name": "instruction", "symbols": ["instruction$string$49", "_", {"literal":"{"}, "_", "instruction$ebnf$15", "_", {"literal":"}"}, "_", {"literal":"{"}, "_", "instruction$ebnf$16", "_", {"literal":"}"}], "postprocess": ifs},
-    {"name": "instruction$string$50", "symbols": [{"literal":"I"}, {"literal":"M"}, {"literal":"P"}, {"literal":"L"}, {"literal":"I"}, {"literal":"C"}, {"literal":"I"}, {"literal":"T"}, {"literal":"_"}, {"literal":"A"}, {"literal":"C"}, {"literal":"C"}, {"literal":"O"}, {"literal":"U"}, {"literal":"N"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$50"]},
-    {"name": "instruction$string$51", "symbols": [{"literal":"I"}, {"literal":"N"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$51"]},
-    {"name": "instruction$string$52", "symbols": [{"literal":"I"}, {"literal":"S"}, {"literal":"N"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$52"]},
-    {"name": "instruction$string$53", "symbols": [{"literal":"I"}, {"literal":"T"}, {"literal":"E"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$53", "__", "instruction"], "postprocess": single_param},
-    {"name": "instruction$string$54", "symbols": [{"literal":"J"}, {"literal":"O"}, {"literal":"I"}, {"literal":"N"}, {"literal":"_"}, {"literal":"T"}, {"literal":"I"}, {"literal":"C"}, {"literal":"K"}, {"literal":"E"}, {"literal":"T"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$54"]},
-    {"name": "instruction$string$55", "symbols": [{"literal":"K"}, {"literal":"E"}, {"literal":"C"}, {"literal":"C"}, {"literal":"A"}, {"literal":"K"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$55"]},
-    {"name": "instruction$string$56", "symbols": [{"literal":"L"}, {"literal":"A"}, {"literal":"M"}, {"literal":"B"}, {"literal":"D"}, {"literal":"A"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$56", "__", "type", "__", "type", "__", "instruction"]},
-    {"name": "instruction$string$57", "symbols": [{"literal":"L"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$57"]},
-    {"name": "instruction$string$58", "symbols": [{"literal":"L"}, {"literal":"E"}, {"literal":"F"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$58", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$59", "symbols": [{"literal":"L"}, {"literal":"E"}, {"literal":"V"}, {"literal":"E"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$59"]},
-    {"name": "instruction$string$60", "symbols": [{"literal":"L"}, {"literal":"O"}, {"literal":"O"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$60", "__", "instruction"], "postprocess": single_param},
-    {"name": "instruction$string$61", "symbols": [{"literal":"L"}, {"literal":"O"}, {"literal":"O"}, {"literal":"P"}, {"literal":"_"}, {"literal":"L"}, {"literal":"E"}, {"literal":"F"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$61", "__", "instruction"], "postprocess": single_param},
-    {"name": "instruction$string$62", "symbols": [{"literal":"L"}, {"literal":"S"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$62"]},
-    {"name": "instruction$string$63", "symbols": [{"literal":"L"}, {"literal":"S"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$63"]},
-    {"name": "instruction$string$64", "symbols": [{"literal":"L"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$64"]},
-    {"name": "instruction$string$65", "symbols": [{"literal":"M"}, {"literal":"A"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$65", "__", "instruction"], "postprocess": single_param},
-    {"name": "instruction$string$66", "symbols": [{"literal":"M"}, {"literal":"E"}, {"literal":"M"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$66"]},
-    {"name": "instruction$string$67", "symbols": [{"literal":"M"}, {"literal":"U"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$67"]},
-    {"name": "instruction$string$68", "symbols": [{"literal":"N"}, {"literal":"E"}, {"literal":"G"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$68"]},
-    {"name": "instruction$string$69", "symbols": [{"literal":"N"}, {"literal":"E"}, {"literal":"Q"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$69"]},
-    {"name": "instruction$string$70", "symbols": [{"literal":"N"}, {"literal":"E"}, {"literal":"V"}, {"literal":"E"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$70"]},
-    {"name": "instruction$string$71", "symbols": [{"literal":"N"}, {"literal":"I"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$71", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$72", "symbols": [{"literal":"N"}, {"literal":"O"}, {"literal":"N"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$72", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$73", "symbols": [{"literal":"N"}, {"literal":"O"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$73"]},
-    {"name": "instruction$string$74", "symbols": [{"literal":"N"}, {"literal":"O"}, {"literal":"W"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$74"]},
-    {"name": "instruction$string$75", "symbols": [{"literal":"O"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$75"]},
-    {"name": "instruction$string$76", "symbols": [{"literal":"P"}, {"literal":"A"}, {"literal":"C"}, {"literal":"K"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$76"]},
-    {"name": "instruction$string$77", "symbols": [{"literal":"P"}, {"literal":"A"}, {"literal":"I"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$77"]},
-    {"name": "instruction$string$78", "symbols": [{"literal":"P"}, {"literal":"A"}, {"literal":"I"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$78", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$79", "symbols": [{"literal":"P"}, {"literal":"A"}, {"literal":"I"}, {"literal":"R"}, {"literal":"I"}, {"literal":"N"}, {"literal":"G"}, {"literal":"_"}, {"literal":"C"}, {"literal":"H"}, {"literal":"E"}, {"literal":"C"}, {"literal":"K"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$79"]},
-    {"name": "instruction$string$80", "symbols": [{"literal":"P"}, {"literal":"U"}, {"literal":"S"}, {"literal":"H"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$80", "__", "pushh"], "postprocess": single_param},
-    {"name": "instruction$string$81", "symbols": [{"literal":"R"}, {"literal":"E"}, {"literal":"A"}, {"literal":"D"}, {"literal":"_"}, {"literal":"T"}, {"literal":"I"}, {"literal":"C"}, {"literal":"K"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$81"]},
-    {"name": "instruction$string$82", "symbols": [{"literal":"R"}, {"literal":"I"}, {"literal":"G"}, {"literal":"H"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$82", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$83", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"P"}, {"literal":"L"}, {"literal":"I"}, {"literal":"N"}, {"literal":"G"}, {"literal":"_"}, {"literal":"E"}, {"literal":"M"}, {"literal":"P"}, {"literal":"T"}, {"literal":"Y"}, {"literal":"_"}, {"literal":"S"}, {"literal":"T"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$83", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$84", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"P"}, {"literal":"L"}, {"literal":"I"}, {"literal":"N"}, {"literal":"G"}, {"literal":"_"}, {"literal":"V"}, {"literal":"E"}, {"literal":"R"}, {"literal":"I"}, {"literal":"F"}, {"literal":"Y"}, {"literal":"_"}, {"literal":"U"}, {"literal":"P"}, {"literal":"D"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$84"]},
-    {"name": "instruction$string$85", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"L"}, {"literal":"F"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$85"]},
-    {"name": "instruction$string$86", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"L"}, {"literal":"F"}, {"literal":"_"}, {"literal":"A"}, {"literal":"D"}, {"literal":"D"}, {"literal":"R"}, {"literal":"E"}, {"literal":"S"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$86"]},
-    {"name": "instruction$string$87", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"N"}, {"literal":"D"}, {"literal":"E"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$87"]},
-    {"name": "instruction$string$88", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"T"}, {"literal":"_"}, {"literal":"D"}, {"literal":"E"}, {"literal":"L"}, {"literal":"E"}, {"literal":"G"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$88"]},
-    {"name": "instruction$string$89", "symbols": [{"literal":"S"}, {"literal":"H"}, {"literal":"A"}, {"literal":"2"}, {"literal":"5"}, {"literal":"6"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$89"]},
-    {"name": "instruction$string$90", "symbols": [{"literal":"S"}, {"literal":"H"}, {"literal":"A"}, {"literal":"3"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$90"]},
-    {"name": "instruction$string$91", "symbols": [{"literal":"S"}, {"literal":"H"}, {"literal":"A"}, {"literal":"5"}, {"literal":"1"}, {"literal":"2"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$91"]},
-    {"name": "instruction$string$92", "symbols": [{"literal":"S"}, {"literal":"I"}, {"literal":"Z"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$92"]},
-    {"name": "instruction$string$93", "symbols": [{"literal":"S"}, {"literal":"L"}, {"literal":"I"}, {"literal":"C"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$93"]},
-    {"name": "instruction$string$94", "symbols": [{"literal":"S"}, {"literal":"O"}, {"literal":"M"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$94"]},
-    {"name": "instruction$string$95", "symbols": [{"literal":"S"}, {"literal":"O"}, {"literal":"U"}, {"literal":"R"}, {"literal":"C"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$95"]},
-    {"name": "instruction$string$96", "symbols": [{"literal":"S"}, {"literal":"P"}, {"literal":"L"}, {"literal":"I"}, {"literal":"T"}, {"literal":"_"}, {"literal":"T"}, {"literal":"I"}, {"literal":"C"}, {"literal":"K"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$96"]},
-    {"name": "instruction$string$97", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"B"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$97"]},
-    {"name": "instruction$string$98", "symbols": [{"literal":"S"}, {"literal":"W"}, {"literal":"A"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$98"]},
-    {"name": "instruction$string$99", "symbols": [{"literal":"T"}, {"literal":"I"}, {"literal":"C"}, {"literal":"K"}, {"literal":"E"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$99"]},
-    {"name": "instruction$string$100", "symbols": [{"literal":"T"}, {"literal":"O"}, {"literal":"T"}, {"literal":"A"}, {"literal":"L"}, {"literal":"_"}, {"literal":"V"}, {"literal":"O"}, {"literal":"T"}, {"literal":"I"}, {"literal":"N"}, {"literal":"G"}, {"literal":"_"}, {"literal":"P"}, {"literal":"O"}, {"literal":"W"}, {"literal":"E"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$100"]},
-    {"name": "instruction$string$101", "symbols": [{"literal":"T"}, {"literal":"R"}, {"literal":"A"}, {"literal":"N"}, {"literal":"S"}, {"literal":"F"}, {"literal":"E"}, {"literal":"R"}, {"literal":"_"}, {"literal":"T"}, {"literal":"O"}, {"literal":"K"}, {"literal":"E"}, {"literal":"N"}, {"literal":"S"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$101"]},
-    {"name": "instruction$string$102", "symbols": [{"literal":"U"}, {"literal":"N"}, {"literal":"I"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$102"]},
-    {"name": "instruction$string$103", "symbols": [{"literal":"U"}, {"literal":"N"}, {"literal":"P"}, {"literal":"A"}, {"literal":"C"}, {"literal":"K"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$103", "__", "type"], "postprocess": single_param},
-    {"name": "instruction$string$104", "symbols": [{"literal":"U"}, {"literal":"N"}, {"literal":"P"}, {"literal":"A"}, {"literal":"I"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$104"]},
-    {"name": "instruction$string$105", "symbols": [{"literal":"U"}, {"literal":"N"}, {"literal":"P"}, {"literal":"A"}, {"literal":"I"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$105", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$106", "symbols": [{"literal":"U"}, {"literal":"P"}, {"literal":"D"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$106"]},
-    {"name": "instruction$string$107", "symbols": [{"literal":"U"}, {"literal":"P"}, {"literal":"D"}, {"literal":"A"}, {"literal":"T"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$107", "__", "int"], "postprocess": single_param},
-    {"name": "instruction$string$108", "symbols": [{"literal":"V"}, {"literal":"O"}, {"literal":"T"}, {"literal":"I"}, {"literal":"N"}, {"literal":"G"}, {"literal":"_"}, {"literal":"P"}, {"literal":"O"}, {"literal":"W"}, {"literal":"E"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$108"]},
-    {"name": "instruction$string$109", "symbols": [{"literal":"X"}, {"literal":"O"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$109"]},
-    {"name": "instruction$string$110", "symbols": [{"literal":"{"}, {"literal":"}"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "instruction", "symbols": ["instruction$string$110"]},
-    {"name": "pushh$string$1", "symbols": [{"literal":"s"}, {"literal":"t"}, {"literal":"r"}, {"literal":"i"}, {"literal":"n"}, {"literal":"g"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "pushh", "symbols": ["pushh$string$1", "__", "dqstring"], "postprocess": function(d) { return [ d[0], d[2] ] }},
-    {"name": "pushh$string$2", "symbols": [{"literal":"s"}, {"literal":"t"}, {"literal":"r"}, {"literal":"i"}, {"literal":"n"}, {"literal":"g"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "pushh", "symbols": ["pushh$string$2", "__", "sqstring"], "postprocess": function(d) { return [ d[0], d[2] ] }},
-    {"name": "pushh", "symbols": ["type", "__", "int"], "postprocess": function(d) { return [ d[0], d[2] ] }}
+    {"name": "instruction$ebnf$8$subexpression$1", "symbols": ["__", (lexer.has("annot") ? {type: "annot"} : annot)]},
+    {"name": "instruction$ebnf$8", "symbols": ["instruction$ebnf$8", "instruction$ebnf$8$subexpression$1"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "instruction", "symbols": [{"literal":"PUSH"}, "instruction$ebnf$8", "__", "type", "__", "data"], "postprocess": doubleArgKeywordToJson},
+    {"name": "instruction$subexpression$1", "symbols": [{"literal":"DIP"}]},
+    {"name": "instruction$subexpression$1", "symbols": [{"literal":"DUP"}]},
+    {"name": "instruction", "symbols": ["instruction$subexpression$1", "__", (lexer.has("number") ? {type: "number"} : number), "_", "subInstruction"], "postprocess": dipnToJson},
+    {"name": "instruction$subexpression$2", "symbols": [{"literal":"DIG"}]},
+    {"name": "instruction$subexpression$2", "symbols": [{"literal":"DUG"}]},
+    {"name": "instruction", "symbols": ["instruction$subexpression$2", "__", (lexer.has("number") ? {type: "number"} : number)], "postprocess": dignToJson},
+    {"name": "instruction", "symbols": [{"literal":"DROP"}, "__", (lexer.has("number") ? {type: "number"} : number)], "postprocess": dropnToJson},
+    {"name": "instruction", "symbols": [{"literal":"DROP"}], "postprocess": keywordToJson},
+    {"name": "instruction", "symbols": [{"literal":"CREATE_CONTRACT"}, "__", (lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "parameter", "_", "storage", "_", "code", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": subContractToJson},
+    {"name": "instruction", "symbols": [{"literal":"EMPTY_MAP"}, "__", "type", "__", "type"], "postprocess": doubleArgKeywordToJson},
+    {"name": "instruction", "symbols": [{"literal":"EMPTY_MAP"}, "_", (lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "type", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen), "_", "type"], "postprocess": doubleArgParenKeywordToJson},
+    {"name": "instructions", "symbols": [(lexer.has("baseInstruction") ? {type: "baseInstruction"} : baseInstruction)], "postprocess": id},
+    {"name": "instructions", "symbols": [(lexer.has("macroCADR") ? {type: "macroCADR"} : macroCADR)], "postprocess": id},
+    {"name": "instructions", "symbols": [(lexer.has("macroDIP") ? {type: "macroDIP"} : macroDIP)], "postprocess": id},
+    {"name": "instructions", "symbols": [(lexer.has("macroDUP") ? {type: "macroDUP"} : macroDUP)], "postprocess": id},
+    {"name": "instructions", "symbols": [(lexer.has("macroSETCADR") ? {type: "macroSETCADR"} : macroSETCADR)], "postprocess": id},
+    {"name": "instructions", "symbols": [(lexer.has("macroASSERTlist") ? {type: "macroASSERTlist"} : macroASSERTlist)], "postprocess": id},
+    {"name": "data", "symbols": [(lexer.has("constantData") ? {type: "constantData"} : constantData)], "postprocess": keywordToJson},
+    {"name": "data", "symbols": [(lexer.has("singleArgData") ? {type: "singleArgData"} : singleArgData), "__", "data"], "postprocess": singleArgKeywordToJson},
+    {"name": "data", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("singleArgData") ? {type: "singleArgData"} : singleArgData), "__", "data", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": singleArgKeywordWithParenToJson},
+    {"name": "data", "symbols": [(lexer.has("doubleArgData") ? {type: "doubleArgData"} : doubleArgData), "__", "data", "__", "data"], "postprocess": doubleArgKeywordToJson},
+    {"name": "data", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("doubleArgData") ? {type: "doubleArgData"} : doubleArgData), "__", "data", "__", "data", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": doubleArgKeywordWithParenToJson},
+    {"name": "data", "symbols": ["subData"], "postprocess": id},
+    {"name": "data", "symbols": ["subElt"], "postprocess": id},
+    {"name": "data", "symbols": [(lexer.has("hex") ? {type: "hex"} : hex)], "postprocess": hexToJson},
+    {"name": "data", "symbols": [(lexer.has("number") ? {type: "number"} : number)], "postprocess": intToJson},
+    {"name": "data", "symbols": [(lexer.has("string") ? {type: "string"} : string)], "postprocess": stringToJson},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "[]"; }},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "data", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO"; }},
+    {"name": "subData$ebnf$1$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$1", "symbols": ["subData$ebnf$1$subexpression$1"]},
+    {"name": "subData$ebnf$1$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$1", "symbols": ["subData$ebnf$1", "subData$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subData$ebnf$1", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subData$ebnf$2$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$2", "symbols": ["subData$ebnf$2$subexpression$1"]},
+    {"name": "subData$ebnf$2$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$2", "symbols": ["subData$ebnf$2", "subData$ebnf$2$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subData$ebnf$2", "data", "_", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": function(d) { return "TODO"; }},
+    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": function(d) { return "[]"; }},
+    {"name": "subData$ebnf$3$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$3", "symbols": ["subData$ebnf$3$subexpression$1"]},
+    {"name": "subData$ebnf$3$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$3", "symbols": ["subData$ebnf$3", "subData$ebnf$3$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subData$ebnf$3", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subData$ebnf$4$subexpression$1", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$4", "symbols": ["subData$ebnf$4$subexpression$1"]},
+    {"name": "subData$ebnf$4$subexpression$2", "symbols": ["data", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subData$ebnf$4", "symbols": ["subData$ebnf$4", "subData$ebnf$4$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subData", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subData$ebnf$4", "data", "_", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": function(d) { return "TODO!!"; }},
+    {"name": "elt", "symbols": [(lexer.has("elt") ? {type: "elt"} : elt), "_", "data", "_", "data"], "postprocess": doubleArgKeywordToJson},
+    {"name": "subElt$ebnf$1$subexpression$1", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subElt$ebnf$1", "symbols": ["subElt$ebnf$1$subexpression$1"]},
+    {"name": "subElt$ebnf$1$subexpression$2", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subElt$ebnf$1", "symbols": ["subElt$ebnf$1", "subElt$ebnf$1$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subElt", "symbols": [(lexer.has("lbrace") ? {type: "lbrace"} : lbrace), "_", "subElt$ebnf$1", (lexer.has("rbrace") ? {type: "rbrace"} : rbrace)], "postprocess": instructionSetToJsonSemi},
+    {"name": "subElt$ebnf$2$subexpression$1", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subElt$ebnf$2", "symbols": ["subElt$ebnf$2$subexpression$1"]},
+    {"name": "subElt$ebnf$2$subexpression$2", "symbols": ["elt", "_", (lexer.has("semicolon") ? {type: "semicolon"} : semicolon), "_"]},
+    {"name": "subElt$ebnf$2", "symbols": ["subElt$ebnf$2", "subElt$ebnf$2$subexpression$2"], "postprocess": function arrpush(d) {return d[0].concat([d[1]]);}},
+    {"name": "subElt", "symbols": [(lexer.has("lparen") ? {type: "lparen"} : lparen), "_", "subElt$ebnf$2", (lexer.has("rparen") ? {type: "rparen"} : rparen)], "postprocess": instructionSetToJsonSemi},
+    {"name": "semicolons$ebnf$1", "symbols": [(lexer.has("semicolon") ? {type: "semicolon"} : semicolon)], "postprocess": id},
+    {"name": "semicolons$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "semicolons", "symbols": ["semicolons$ebnf$1"], "postprocess": function(d) {return null;}},
+    {"name": "_$subexpression$1$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": id},
+    {"name": "_$subexpression$1$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "_$subexpression$1", "symbols": ["_$subexpression$1$ebnf$1"]},
+    {"name": "_", "symbols": ["_$subexpression$1"], "postprocess": function(d) {return null;}},
+    {"name": "_$subexpression$2$ebnf$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)], "postprocess": id},
+    {"name": "_$subexpression$2$ebnf$1", "symbols": [], "postprocess": function(d) {return null;}},
+    {"name": "_$subexpression$2", "symbols": ["_$subexpression$2$ebnf$1", (lexer.has("comment") ? {type: "comment"} : comment), "_"]},
+    {"name": "_", "symbols": ["_$subexpression$2"], "postprocess": function(d) {return null;}},
+    {"name": "__$subexpression$1", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws)]},
+    {"name": "__", "symbols": ["__$subexpression$1"], "postprocess": function(d) {return null;}},
+    {"name": "__$subexpression$2", "symbols": [(lexer.has("ws") ? {type: "ws"} : ws), (lexer.has("comment") ? {type: "comment"} : comment), "__"]},
+    {"name": "__", "symbols": ["__$subexpression$2"], "postprocess": function(d) {return null;}}
 ]
   , ParserStart: "main"
 }
