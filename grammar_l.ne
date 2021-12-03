@@ -55,7 +55,7 @@ instruction ->
               | instructions (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
               # PUSH
               | "PUSH" (__ %annot):* __ type __ data {% doubleArgKeywordToJson %}
-              | "PUSH" __ type _ %lbrace _ %rbrace {% pushToJson %}
+              #| "PUSH" __ type _ %lbrace _ %rbrace {% pushToJson %}
               # DIP & DUP
               | ("DIP" | "DUP") __ %number _ subInstruction {% dipnToJson %}
               # DIG & DUG
@@ -82,7 +82,7 @@ instructions ->
 data ->
         %constantData {% keywordToJson %}
       | %singleArgData __ data {% singleArgKeywordToJson %}
-      | %lparen _ %singleArgData __ (data) _ %rparen {% singleArgKeywordWithParenToJson %}
+      | %lparen _ %singleArgData __ data _ %rparen {% singleArgKeywordWithParenToJson %}
       | %doubleArgData __ data __ data {% doubleArgKeywordToJson %}
       | %lparen _ %doubleArgData __ data __ data _ %rparen {% doubleArgKeywordWithParenToJson %}
       | subData  {% id %}
@@ -93,17 +93,20 @@ data ->
 
 subData ->
            %lbrace _ %rbrace {% function(d) { return "[]"; } %}
+         | %lbrace _ data _ %rbrace {% function(d) { return "TODO"; } %}
          | %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
-         | %lbrace _ (data _ %semicolon _):* data _ %rbrace {% function(d) { return "TODO"; } %}
+         | %lbrace _ (data _ %semicolon _):+ data _ %rbrace {% function(d) { return "TODO"; } %}
+         | %lparen _ %rparen {% function(d) { return "[]"; } %}
+         # | %lparen _ data _ %rparen {% function(d) { return "TODO"; } %}
          | %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
-         | %lparen _ (data _ %semicolon _):* data _ %rparen {% function(d) { return "TODO!!"; } %}
+         | %lparen _ (data _ %semicolon _):+ data _ %rparen {% function(d) { return "TODO!!"; } %}
+
+elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
 subElt ->
          # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
           %lbrace _ (elt _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
         | %lparen _ (elt _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
-
-elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
 semicolons -> %semicolon:? {% function(d) {return null;} %}
 
