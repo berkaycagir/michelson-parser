@@ -26,9 +26,9 @@ type ->
       | %lparen _ %doubleArgType (__ %annot):* __ type __ type _ %rparen {% doubleArgTypeKeywordWithParenToJson %}
 
 subInstruction ->
-                %lbrace _ %rbrace {% function(d) { return ""; } %}
+                %lbrace _ %rbrace {% function(d) { return "[]"; } %}
               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-              | %lbrace _ ((subInstruction _ (semicolon _):?) | (instruction _ semicolon _)):+ (instruction _):? %rbrace {% function(d) { return instructionSetToJsonNoSemi(d[2], d[3]); } %}
+              | %lbrace _ ((subInstruction _ (%semicolon _):?) | (instruction _ %semicolon _)):+ (instruction _):? %rbrace {% function(d) { return instructionSetToJsonNoSemi(d[2], d[3]); } %}
 
 instruction ->
               # bare instruction
@@ -85,13 +85,13 @@ data ->
 
 subData ->
            %lbrace _ %rbrace {% function(d) { return "[]"; } %}
-         | %lbrace _ data _ %rbrace {% function(d) { return "TODO"; } %}
-         | %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
-         | %lbrace _ (data _ %semicolon _):+ data _ %rbrace {% function(d) { return "TODO"; } %}
+         | %lbrace _ data _ %rbrace {% function(d) { return d[2]; } %}
+         #| %lbrace _ (data _ %semicolon _):+ %rbrace {% instructionSetToJsonSemi %}
+         | %lbrace _ (data _ %semicolon _):+ (data _):? %rbrace {% function(d) { return dataSetToJsonNoSemi(d[2], d[3]); } %}
          | %lparen _ %rparen {% function(d) { return "[]"; } %}
          # | %lparen _ data _ %rparen {% function(d) { return "TODO"; } %}
-         | %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
-         | %lparen _ (data _ %semicolon _):+ data _ %rparen {% function(d) { return "TODO!!"; } %}
+         #| %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
+         | %lparen _ (data _ %semicolon _):+ (data _):? %rparen {% function(d) { return dataSetToJsonNoSemi(d[2], d[3]); } %}
 
 elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
 
@@ -101,7 +101,6 @@ subElt ->
         | %lparen _ (elt _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 semicolons -> %semicolon:? {% function(d) {return null;} %}
-semicolon -> %semicolon {% function(d) {return null;} %}
 
 _  ->
       (%ws:?) {% function(d) {return null;} %}
@@ -611,6 +610,13 @@ const nestedArrayChecker = x => {
         return x;
     }
 };
+const dataSetToJsonNoSemi = (f, s) => {
+    if (s != null) {
+        return f.map(x => x[0]).concat(s[0]).map(x => nestedArrayChecker(x));
+    } else {
+        return f.map(x => x[0]).map(x => nestedArrayChecker(x));
+    }
+}
 /**
  * Given a list of michelson instructions, convert it into JSON.
  * Example: "{CAR; NIL operation; PAIR;}" ->
