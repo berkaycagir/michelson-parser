@@ -28,7 +28,7 @@ type ->
 subInstruction ->
                 %lbrace _ %rbrace {% function(d) { return ""; } %}
               | %lbrace _ instruction _ %rbrace {% function(d) { return d[2]; } %}
-              | %lbrace _ ((subInstruction _ (%semicolon _):?) | (instruction _ %semicolon _)):+ (instruction _):? %rbrace {% instructionSetToJsonNoSemi %}
+              | %lbrace _ ((subInstruction _ (semicolon _):?) | (instruction _ semicolon _)):+ (instruction _):? %rbrace {% function(d) { return instructionSetToJsonNoSemi(d[2], d[3]); } %}
 
 instruction ->
               # bare instruction
@@ -101,6 +101,7 @@ subElt ->
         | %lparen _ (elt _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
 
 semicolons -> %semicolon:? {% function(d) {return null;} %}
+semicolon -> %semicolon {% function(d) {return null;} %}
 
 _  ->
       (%ws:?) {% function(d) {return null;} %}
@@ -617,8 +618,19 @@ const nestedArrayChecker = x => {
  * '{ prim: NIL, args: [{ prim: operation }] }',
  * '{ prim: PAIR }' ]
  */
-const instructionSetToJsonNoSemi = (d, isNested) => {
-    if (!isNested) {
+const instructionSetToJsonNoSemi = (f, s) => {
+    if (s != null) {
+        return f.map(x => x[0][0]).concat(s[0]).map(x => nestedArrayChecker(x));
+    } else {
+        return f.map(x => x[0][0]).map(x => nestedArrayChecker(x));
+    }
+    
+    /*if (d[3] != null) {
+        return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x));
+    } else {
+        return d[2].map(x => x[0]).map(x => nestedArrayChecker(x));
+    }*/
+    /*if (d[2].length > 3) {
         try {
             return d[2].map(x => x[0]).concat(d[3]).map(x => nestedArrayChecker(x));
         } catch (e) {
@@ -626,7 +638,7 @@ const instructionSetToJsonNoSemi = (d, isNested) => {
         }
     } else {
         return instructionSetToJsonNoSemi(d[2], false).concat(d[6].map(x => x[0]).concat(d[7]).map(x => nestedArrayChecker(x)));
-    }
+    }*/
 };
 const instructionSetToJsonSemi = (d, isNested) => {
     if (!isNested) {
