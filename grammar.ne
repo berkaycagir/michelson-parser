@@ -12,14 +12,14 @@ parameter -> %parameter (__ %annot):* __ type _ %semicolon {% singleArgKeywordTo
 storage -> %storage (__ %annot):* __ type _ %semicolon {% singleArgKeywordToJson %}
 
 code ->
-        %code _ subInstruction (_ %semicolon):? {% function (d) { return d[2]; } %}
+        %code _ subInstruction (_ %semicolon):? {% function (d) { return [d[2], findLine(d)]; } %}
       | %code _ %lbrace _ %rbrace _ %semicolon {% function (d) { return "code {}"; } %}
 
 type ->
         %comparableType (__ %annot):* {% keywordToJson %}
       | %constantType (__ %annot):* {% keywordToJson %}
       | %singleArgType (__ %annot):* __ type {% singleArgKeywordToJson %}
-      | %doubleArgType __ type __ type {% doubleArgKeywordToJson %}
+      | %doubleArgType (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
       | %lparen _ %comparableType (__ %annot):* _ %rparen {% comparableTypeToJson %}
       | %lparen _ %constantType (__ %annot):* _ %rparen {% comparableTypeToJson %}
       | %lparen _ %singleArgType (__ %annot):* __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
@@ -60,7 +60,7 @@ instruction ->
               # CREATE_CONTRACT
               | "CREATE_CONTRACT" __ %lbrace _ parameter _ storage _ code _ %rbrace {% subContractToJson %}
               # EMPTY_MAP
-              | "EMPTY_MAP" __ type __ type {% doubleArgKeywordToJson %}
+              | "EMPTY_MAP" (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
               | "EMPTY_MAP" _ %lparen _ type _ %rparen _ type {% doubleArgParenKeywordToJson %}
 
 instructions ->
@@ -75,7 +75,7 @@ data ->
         %constantData {% keywordToJson %}
       | %singleArgData __ data {% singleArgKeywordToJson %}
       | %lparen _ %singleArgData __ data _ %rparen {% singleArgKeywordWithParenToJson %}
-      | %doubleArgData __ data __ data {% doubleArgKeywordToJson %}
+      | %doubleArgData (__ %annot):* __ data __ data {% doubleArgKeywordToJson %}
       | %lparen _ %doubleArgData __ data __ data _ %rparen {% doubleArgKeywordWithParenToJson %}
       | subData  {% id %}
       | subElt {% id %}
@@ -93,7 +93,7 @@ subData ->
          #| %lparen _ (data _ %semicolon _):+ %rparen {% instructionSetToJsonSemi %}
          | %lparen _ (data _ %semicolon _):+ (data _):? %rparen {% function(d) { return dataSetToJsonNoSemi(d[2], d[3]); } %}
 
-elt -> %elt _ data _ data {% doubleArgKeywordToJson %}
+elt -> %elt (__ %annot):* _ data _ data {% doubleArgKeywordToJson %}
 
 subElt ->
          # %lbrace _ %rbrace {% function(d) { return "[]"; } %}
@@ -180,13 +180,13 @@ const expandC_R = (word, annot, d) => {
     if (annot != null) {
         const lastChar = word.slice(-2, -1);
         if (lastChar === "A") {
-            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CAR", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CAR", "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         }
         else if (lastChar === "D") {
-            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CDR", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            expandedC_R[expandedC_R.length - 1] = `{ "prim": "CDR", "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         }
     }
-    return `[ ${expandedC_R.join(", ")}, { "line": "${findLine(d)}" } ]`;
+    return `[ ${expandedC_R.join(", ")}, { "line": ${findLine(d)} } ]`;
 };
 const check_compare = cmp => macroCMPlist.includes(cmp);
 const expand_cmp = (cmp, annot, d) => {
@@ -194,9 +194,9 @@ const expand_cmp = (cmp, annot, d) => {
     var binary_op = keywordToJson([`${op}`]);
     var compare = keywordToJson(["COMPARE"]);
     if (annot != null) {
-        binary_op = `{ "prim": "${op}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+        binary_op = `{ "prim": "${op}", "annots": [${annot}], "line": ${findLine(d)} }`;
     }
-    return `[ ${compare}, ${binary_op}, { "line": "${findLine(d)}" } ]`;
+    return `[ ${compare}, ${binary_op}, { "line": ${findLine(d)} } ]`;
 };
 const check_dup = dup => DUPmatcher.test(dup);
 const expand_dup = (dup, annot, d) => {
@@ -207,13 +207,13 @@ const expand_dup = (dup, annot, d) => {
             t += '[ { "prim": "DIP", "args": [ ';
         }
         if (annot == null) {
-            t += `[ { "prim": "DUP" }, { "line": "${findLine(d)}" } ]`;
+            t += `[ { "prim": "DUP" }, { "line": ${findLine(d)} } ]`;
         }
         else {
-            t += `[ { "prim": "DUP", "annots": [${annot}] }, { "line": "${findLine(d)}" } ]`;
+            t += `[ { "prim": "DUP", "annots": [${annot}] }, { "line": ${findLine(d)} } ]`;
         }
         for (let i = 0; i < c; i++) {
-            t += ` ] }, { "prim": "SWAP" }, { "line": "${findLine(d)}" } ]`;
+            t += ` ] }, { "prim": "SWAP" }, { "line": ${findLine(d)} } ]`;
         }
         return t;
     }
@@ -224,31 +224,39 @@ const expand_assert = (assert, annot, d) => {
     const annotation = !!annot ? `, "annots": [ ${annot} ]` : "";
     switch (assert) {
         case "ASSERT":
-            return `[ { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPEQ":
-            return `[ [ { "prim": "COMPARE"}, { "prim": "EQ" } ], {"prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim": "COMPARE"}, { "prim": "EQ" } ], {"prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPGE":
-            return `[ [ { "prim":"COMPARE" }, { "prim": "GE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim":"COMPARE" }, { "prim": "GE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPGT":
-            return `[ [ { "prim": "COMPARE" }, { "prim": "GT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim": "COMPARE" }, { "prim": "GT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPLE":
-            return `[ [ { "prim": "COMPARE" }, { "prim": "LE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim": "COMPARE" }, { "prim": "LE" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPLT":
-            return `[ [ { "prim": "COMPARE" }, { "prim": "LT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim": "COMPARE" }, { "prim": "LT" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPNEQ":
-            return `[ [ { "prim": "COMPARE" }, { "prim": "NEQ" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ [ { "prim": "COMPARE" }, { "prim": "NEQ" } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_EQ":
-            return `[ { "prim": "EQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "EQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_GE":
-            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim":"FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim":"FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_GT":
-            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_LE":
-            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_LT":
-            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
         case "ASSERT_NEQ":
-            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
+        case "ASSERT_SOME":
+            return `[ { "prim": "IF_NONE", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ] }, { "line": ${findLine(d)} } ]`;
+        case "ASSERT_NONE":
+            return `[ { "prim": "IF_NONE", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ] }, { "line": ${findLine(d)} } ]`;
+        case "ASSERT_LEFT":
+            return `[ { "prim": "IF_LEFT", "args": [ [ { "prim": "RENAME" } ], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] }, { "line": ${findLine(d)} } ]`;
+        case "ASSERT_RIGHT":
+            return `[ { "prim": "IF_LEFT", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ] }, { "line": ${findLine(d)} } ]`;
         default:
             return "";
     }
@@ -256,10 +264,10 @@ const expand_assert = (assert, annot, d) => {
 const check_fail = fail => fail === "FAIL";
 const expand_fail = (fail, annot, d) => {
     if (annot == null) {
-        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH" }, { "line": "${findLine(d)}" } ]`;
+        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH" }, { "line": ${findLine(d)} } ]`;
     }
     else {
-        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH", "annots": [${annot}] }, { "line": "${findLine(d)}" } ]`;
+        return `[ { "prim": "UNIT" }, { "prim": "FAILWITH", "annots": [${annot}] }, { "line": ${findLine(d)} } ]`;
     }
 };
 const check_if = ifStatement => (macroIFCMPlist.includes(ifStatement) || macroIFlist.includes(ifStatement) || ifStatement === "IF_SOME"); // TODO: IF_SOME
@@ -267,31 +275,31 @@ const expandIF = (ifInstr, ifTrue, ifFalse, annot, d) => {
     const annotation = !!annot ? `, "annots": [ ${annot} ] ` : " ";
     switch (ifInstr) {
         case "IFCMPEQ":
-            return `[ { "prim": "COMPARE" }, { "prim": "EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFCMPGE":
-            return `[ { "prim": "COMPARE" }, { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFCMPGT":
-            return `[ { "prim": "COMPARE" }, { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFCMPLE":
-            return `[ { "prim": "COMPARE" }, { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFCMPLT":
-            return `[ { "prim": "COMPARE" }, { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFCMPNEQ":
-            return `[ { "prim": "COMPARE" }, { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "COMPARE" }, { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFEQ":
-            return `[ { "prim":"EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim":"EQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFGE":
-            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "GE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFGT":
-            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "GT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFLE":
-            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "LE" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFLT":
-            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "LT" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IFNEQ":
-            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "NEQ" }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         case "IF_SOME":
-            return `[ { "prim": "IF_NONE", "args": [ [ ${ifFalse} ], [ ${ifTrue} ] ]${annotation}}, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "IF_NONE", "args": [ [ ${ifFalse} ], [ ${ifTrue} ] ]${annotation}}, { "line": ${findLine(d)} } ]`;
         default:
             return "";
     }
@@ -310,7 +318,7 @@ const expandDIP = (dip, instruction, annot, d) => {
         }
         t += " }]";
         for (let i = 0; i < c - 1; i++) {
-            t += ` ] }, { "line": "${findLine(d)}" } ]`;
+            t += ` ] }, { "line": ${findLine(d)} } ]`;
         }
         return t;
     }
@@ -324,15 +332,15 @@ const expand_other = (word, annot, d) => {
     if (word === "UNPAIR") {
         if (annot == null) {
             // return '[ [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ] ]';
-            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ {"prim": "CDR" } ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ {"prim": "CDR" } ] }, { "line": ${findLine(d)} } ]`;
         }
         else if (annot.length === 1) {
             // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ]  } ] ]`;
-            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot}] }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "line": ${findLine(d)} } ]`;
         }
         else if (annot.length === 2) {
             // return `[ [ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [${annot[1]}] } ] ]  } ] ]`;
-            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ { "prim": "CDR", "annots": [${annot[1]}] } ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR", "annots": [${annot[0]}] }, { "prim": "DIP", "args": [ { "prim": "CDR", "annots": [${annot[1]}] } ] }, { "line": ${findLine(d)} } ]`;
         }
         else {
             return "";
@@ -344,14 +352,14 @@ const expand_other = (word, annot, d) => {
             //                { "prim": "CAR" },
             //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
             //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]]}]]]}]`;
-            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] } ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] } ] }, { "line": ${findLine(d)} } ]`;
         }
         else {
             // return `[ [ { "prim": "DUP" },
             //                { "prim": "CAR" },
             //                { "prim": "DIP", "args": [ [ { "prim": "CDR" } ] ] } ],
             //                {"prim":"DIP","args":[[[{"prim":"DUP"},{"prim":"CAR"},{"prim":"DIP","args":[[{"prim":"CDR"}]],"annots": [${annot}]}]]]}]`;
-            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ], "annots": [ ${annot} ] } ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ] }, { "prim": "DIP", "args": [ { "prim": "DUP" }, { "prim": "CAR" }, { "prim": "DIP", "args": [ { "prim": "CDR" } ], "annots": [ ${annot} ] } ] }, { "line": ${findLine(d)} } ]`;
         }
     }
 };
@@ -364,17 +372,17 @@ const nestSetCadr = (r, d) => {
     const c = r.charAt(0);
     if (r.length === 1) {
         if (c === "A") {
-            return `[ { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%", "%@" ] }, { "line": ${findLine(d)} } ]`;
         }
         else if (c === "D") {
-            return `[ { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%" ] }, { "line": "${findLine(d)}" } ]`;
+            return `[ { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%" ] }, { "line": ${findLine(d)} } ]`;
         }
     }
     if (c === "A") {
-        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CAR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CAR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CDR", "annots": [ "@%%" ] }, { "prim": "SWAP" }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": ${findLine(d)} } ]`;
     }
     else if (c === "D") {
-        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": "${findLine(d)}" } ]`;
+        return `[ { "prim": "DUP" }, { "prim": "DIP", "args": [ [ { "prim": "CDR", "annots": [ "@%%" ] }, ${nestSetCadr(r.slice(1), d)} ] ] }, { "prim": "CAR", "annots": [ "@%%" ] }, { "prim": "PAIR", "annots": [ "%@", "%@" ] }, { "line": ${findLine(d)} } ]`;
     }
 };
 const checkKeyword = word => {
@@ -439,17 +447,17 @@ const expandKeyword = (word, annot, d) => {
  * Given a int, convert it to JSON.
  * Example: "3" -> { "int": "3" }
  */
-const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": "${findLine(d)}" }`;
+const intToJson = d => `{ "int": "${parseInt(d[0])}", "line": ${findLine(d)} }`;
 /**
  * Given a string, convert it to JSON.
  * Example: "string" -> "{ "string": "blah" }"
  */
-const stringToJson = d => `{ "string": ${d[0]}, "line": "${findLine(d)}" }`;
+const stringToJson = d => `{ "string": ${d[0]}, "line": ${findLine(d)} }`;
 /**
  * Given a hex, convert it to JSON.
  * Example: "0x123456" -> "{ "bytes": "123456" }"
  */
-const hexToJson = d => `{ "bytes": ${d[0]}, "line": "${findLine(d)}" }`;
+const hexToJson = d => `{ "bytes": "${d[0].toString().substring(2)}", "line": ${findLine(d)} }`;
 /**
  * Given a keyword, convert it to JSON.
  * Example: "int" -> "{ "prim" : "int" }"
@@ -461,7 +469,7 @@ const keywordToJson = d => {
             return [expandKeyword(word, null, d)];
         }
         else {
-            return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "line": ${findLine(d)} }`;
         }
     } else {
         if (d[1].length > 0) {
@@ -470,14 +478,14 @@ const keywordToJson = d => {
                 return [expandKeyword(word, annot, d)];
             }
             else {
-                return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+                return `{ "prim": "${d[0]}", "annots": [ ${annot} ], "line": ${findLine(d)} }`;
             }
         } else {
             if (checkKeyword(word)) {
                 return [expandKeyword(word, null, d)];
             }
             else {
-                return `{ "prim": "${d[0]}", "line": "${findLine(d)}" }`;
+                return `{ "prim": "${d[0]}", "line": ${findLine(d)} }`;
             }
         }
     }
@@ -490,21 +498,21 @@ const singleArgKeywordToJson = d => {
     if (d.length > 3) {
         if (d[1].length > 0) {
             const annot = d[1].map(x => `"${x[1]}"`);
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         } else {
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": ${findLine(d)} }`;
         }
     } else {
-        return `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]} ], "line": ${findLine(d)} }`;
     }
 };
 const comparableTypeToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[2]}", "annots": [${annot}], "line": "${findLine(d)}" }`;
+    return `{ "prim": "${d[2]}", "annots": [${annot}], "line": ${findLine(d)} }`;
 };
 const singleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[2]}", "args": [ ${d[5]} ], "annots": [${annot}], "line": "${findLine(d)}" }`;
+    return `{ "prim": "${d[2]}", "args": [ ${d[5]} ], "annots": [${annot}], "line": ${findLine(d)} }`;
 };
 const singleArgInstrKeywordToJson = d => {
     const word = `${d[0].toString()}`;
@@ -513,13 +521,13 @@ const singleArgInstrKeywordToJson = d => {
         if (check_dip(word)) {
             return expandDIP(word, d[3], annot, d);
         } else {
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         }
     } else {
         if (check_dip(word)) {
             return expandDIP(word, d[3], null, d);
         } else {
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "line": ${findLine(d)} }`;
         }
     }
 };
@@ -530,15 +538,15 @@ const singleArgTypeKeywordToJson = d => {
         return expandDIP(word, d[2], annot, d);
     }
     else {
-        return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
     }
 };
 /**
  * Given a keyword with one argument and parentheses, convert it to JSON.
  * Example: "(option int)" -> "{ prim: option, args: [{prim: int}] }"
- * Also: (option (mutez))
+ * Also: (option (mutez))  // [d[4].length === 1 ? 0 : 2]
  */
-const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4][d[4].length === 1 ? 0 : 2]} ], "line": "${findLine(d)}" }`;
+const singleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]} ], "line": ${findLine(d)} }`;
 
 /**
  * Given a keyword with two arguments, convert it into JSON.
@@ -548,19 +556,19 @@ const doubleArgKeywordToJson = d => {
     if (d.length > 5) {
         if (d[1].length > 0) {
             const annot = d[1].map(x => `"${x[1]}"`);
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         } else {
-            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]} ], "line": ${findLine(d)} }`;
         }
     } else {
-        return `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]} ], "line": "${findLine(d)}" }`;
+        return `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]} ], "line": ${findLine(d)} }`;
     }
 };
 const doubleArgTypeKeywordToJson = d => {
     const annot = d[1].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+    return `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[6]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
 };
-const doubleArgParenKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[8]} ], "line": "${findLine(d)}" }`;
+const doubleArgParenKeywordToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[4]}, ${d[8]} ], "line": ${findLine(d)} }`;
 const doubleArgInstrKeywordToJson = d => {
     const word = `${d[0].toString()}`;
     if (d[1].length > 0) {
@@ -569,14 +577,14 @@ const doubleArgInstrKeywordToJson = d => {
             return expandIF(word, d[3], d[5], annot, d);
         }
         else {
-            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         }
     } else {
         if (check_if(word)) {
             return expandIF(word, d[3], d[5], null, d);
         }
         else {
-            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "line": "${findLine(d)}" }`;
+            return `{ "prim": "${d[0]}", "args": [ [ ${d[3]} ], [ ${d[5]} ] ], "line": ${findLine(d)} }`;
         }
     }
 };
@@ -584,7 +592,7 @@ const doubleArgInstrKeywordToJson = d => {
  * Given a keyword with two arguments and parentheses, convert it into JSON.
  * Example: "(Pair unit instruction)" -> "{ prim: Pair, args: [{prim: unit}, {prim: instruction}] }"
  */
-const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]}, ${d[6]} ], "line": "${findLine(d)}" }`;
+const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d[4]}, ${d[6]} ], "line": ${findLine(d)} }`;
 /**
  * Given a keyword with three arguments, convert it into JSON.
  * Example: "LAMBDA key unit {DIP;}" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
@@ -592,16 +600,16 @@ const doubleArgKeywordWithParenToJson = d => `{ "prim": "${d[2]}", "args": [ ${d
 const tripleArgKeyWordToJson = d => {
     if (d[1].length > 0) {
         const annot = d[1].map(x => `"${x[1]}"`);
-        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
     } else {
-        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "line": "${findLine(d)}" }`;
+        return `{ "prim": "${d[0]}", "args": [ ${d[3]}, ${d[5]}, [ ${d[7]} ] ], "line": ${findLine(d)} }`;
     }
 };
 /**
  * Given a keyword with three arguments and parentheses, convert it into JSON.
  * Example: "(LAMBDA key unit {DIP;})" -> "{ prim: LAMBDA, args: [{prim: key}, {prim: unit}, {prim: DIP}] }"
  */
-const tripleArgKeyWordWithParenToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, ${d[6]} ], "line": "${findLine(d)}" }`;
+const tripleArgKeyWordWithParenToJson = d => `{ "prim": "${d[0]}", "args": [ ${d[2]}, ${d[4]}, ${d[6]} ], "line": ${findLine(d)} }`;
 const nestedArrayChecker = x => {
     if (Array.isArray(x) && Array.isArray(x[0])) { // handles double array nesting
         return x[0];
@@ -661,21 +669,21 @@ const instructionSetToJsonSemi = (d, isNested) => {
  * parameter, storage, code
  */
 //const scriptToJson = d => `[ ${d[0]}, ${d[2]}, { "prim": "code", "args": [ [ ${d[4]} ] ] } ]`;
-const scriptToJson = (p, s, c) => `[ ${p}, ${s}, { "prim": "code", "args": [ ${c} ] } ]`;
+const scriptToJson = (p, s, c) => `[ ${p}, ${s}, { "prim": "code", "args": [ ${c[0]} ], "line": ${c[1]} } ]`;
 
 const doubleArgTypeKeywordWithParenToJson = d => {
     const annot = d[3].map(x => `"${x[1]}"`);
-    return `{ "prim": "${d[2]}", "args": [ ${d[5]}, ${d[7]} ], "annots": [ ${annot} ], "line": "${findLine(d)}" }`;
+    return `{ "prim": "${d[2]}", "args": [ ${d[5]}, ${d[7]} ], "annots": [ ${annot} ], "line": ${findLine(d)} }`;
 };
 const pushToJson = d => {
-    return `{ "prim": "${d[0]}", "args": [ ${d[2]}, [] ], "line": "${findLine(d)}" }`;
+    return `{ "prim": "${d[0]}", "args": [ ${d[2]}, [] ], "line": ${findLine(d)} }`;
 };
 
-const dipnToJson = d => (d.length > 4) ? `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" }, [ ${d[4]} ] ], "line": "${findLine(d)}" }` : `{ "prim": "${d[0][0]}", "args": [ ${d[2]} ], "line": "${findLine(d)}" }`;
-const dignToJson = d => `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" } ], "line": "${findLine(d)}" }`;
-const dropnToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ], "line": "${findLine(d)}" }`;
+const dipnToJson = d => (d.length > 4) ? `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" }, [ ${d[4]} ] ], "line": ${findLine(d)} }` : `{ "prim": "${d[0][0]}", "args": [ ${d[2]} ], "line": ${findLine(d)} }`;
+const dignToJson = d => `{ "prim": "${d[0][0]}", "args": [ { "int": "${d[2]}" } ], "line": ${findLine(d)} }`;
+const dropnToJson = d => `{ "prim": "${d[0]}", "args": [ { "int": "${d[2]}" } ], "line": ${findLine(d)} }`;
 // const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ [ ${d[8]} ] ] } ] ] }`;
-const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ], "line": "${findLine(d)}" }`;
+const subContractToJson = d => `{ "prim":"CREATE_CONTRACT", "args": [ [ ${d[4]}, ${d[6]}, {"prim": "code" , "args":[ ${d[8]} ] } ] ], "line": ${findLine(d)} }`;
 const instructionListToJson = d => {
     const instructionOne = [d[2]];
     const instructionList = d[3].map(x => x[3]);
@@ -701,11 +709,11 @@ const findLine = d => {
         }
     }
     if (lineNums.size > 1) {
-        var output = "[ ";
+        var output = "[";
         for (const i of lineNums) {
             output = output.concat(i).concat(", ");
         }
-        output = output.substring(0, output.length - 2).concat(" ]");
+        output = output.substring(0, output.length - 2).concat("]");
         return output;
     } else if (lineNums.size === 1) {
         return lineNums.values().next().value;
