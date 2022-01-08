@@ -69,7 +69,7 @@ const checkC_R = c_r => {
     return pattern.test(c_r);
 };
 const expandC_R = (word, annot, d) => {
-    var expandedC_R = word.slice(1, -1).split("").map(c => (c === "A" ? '{ "prim": "CAR" }' : '{ "prim": "CDR" }'));
+    var expandedC_R = word.slice(1, -1).split("").map(c => (c === "A" ? `{ "prim": "CAR", "line": ${findLine(d)} }` : `{ "prim": "CDR", "line": ${findLine(d)} }`));
     if (annot != null) {
         const lastChar = word.slice(-2, -1);
         if (lastChar === "A") {
@@ -79,7 +79,7 @@ const expandC_R = (word, annot, d) => {
             expandedC_R[expandedC_R.length - 1] = `{ "prim": "CDR", "annots": [ ${annot} ], "line": ${findLine(d)} }`;
         }
     }
-    return `[ ${expandedC_R.join(", ")}, "line": ${findLine(d)} ]`;
+    return `[ ${expandedC_R.join(", ")} ]`;
 };
 const check_compare = cmp => macroCMPlist.includes(cmp);
 const expand_cmp = (cmp, annot, d) => {
@@ -202,15 +202,15 @@ const expandDIP = (dip, instruction, annot, d) => {
     if (check_dip(dip)) {
         const c = dip.length - 2;
         for (let i = 0; i < c; i++) {
-            t += '[ { "prim": "DIP", "args": [ ';
+            t += `[ { "prim": "DIP", "line": ${findLine(d)}, "args": [ `;
         }
         t = `${t} [ ${instruction} ] ]`;
         if (annot != null && !!annot) {
             t = `${t}, "annots": [ ${annot} ]`;
         }
-        t += " }]";
+        t += " } ]";
         for (let i = 0; i < c - 1; i++) {
-            t += ` ], "line": ${findLine(d)} } ]`;
+            t += ` ] } ]`;
         }
         return t;
     }
