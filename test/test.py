@@ -10,7 +10,7 @@ for file in sorted(os.listdir("test")):
         continue
     print("• Testing file {}... ".format(file), end="")
     content = subprocess.run(['cat', "test/" + file], check=True, capture_output=True)
-    execution = subprocess.run(["nearley-test", "grammar.js", "-q"], input=content.stdout, capture_output=True)
+    execution = subprocess.run(["nearley-test", "grammar.cjs", "-q"], input=content.stdout, capture_output=True)
     if execution.returncode != 0:
         errors.append(file)
         print("execution resulted in error. ✖ stderr below:")
