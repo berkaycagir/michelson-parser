@@ -19,7 +19,7 @@ type ->
         %comparableType (__ %annot):* {% keywordToJson %}
       | %constantType (__ %annot):* {% keywordToJson %}
       | %singleArgType (__ %annot):* __ type {% singleArgKeywordToJson %}
-      | %doubleArgType (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
+      | %doubleArgType (__ %annot):* __ type __ type {% doubleArgKeywordToJson %}
       | %lparen _ %comparableType (__ %annot):* _ %rparen {% comparableTypeToJson %}
       | %lparen _ %constantType (__ %annot):* _ %rparen {% comparableTypeToJson %}
       | %lparen _ %singleArgType (__ %annot):* __ type _ %rparen {% singleArgTypeKeywordWithParenToJson %}
@@ -143,9 +143,9 @@ const lexer = moo.compile({
     storage: ["Storage", "storage"],
     code: ["Code", "code"],
     comparableType: ["int", "nat", "string", "bytes", "mutez", "bool", "key_hash", "timestamp", "chain_id"],
-    constantType: ["key", "unit", "signature", "operation", "address"],
+    constantType: ["key", "unit", "signature", "operation", "address", "big_map"],
     singleArgType: ["option", "list", "set", "contract"],
-    doubleArgType: ["pair", "or", "lambda", "map", "big_map"],
+    doubleArgType: ["pair", "or", "lambda", "map"],
     baseInstruction: ["ABS", "ADD", "ADDRESS", "AMOUNT", "AND", "BALANCE", "BLAKE2B", "CAR", "CAST", "CDR", "CHECK_SIGNATURE",
         "COMPARE", "CONCAT", "CONS", "CONTRACT", /*"CREATE_CONTRACT",*/ "DIP", /*"DROP",*/ "DUP", "EDIV",
         "EMPTY_SET", "EQ", "EXEC", "FAIL", "FAILWITH", "GE", "GET", "GT", "HASH_KEY", "IF", "IF_CONS", "IF_LEFT", "IF_NONE",
