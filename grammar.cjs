@@ -50,7 +50,7 @@ const lexer = moo.compile({
         "IF_SOME",
         "IFCMPEQ", "IFCMPNEQ", "IFCMPLT", "IFCMPGT", "IFCMPLE", "IFCMPGE", "CMPEQ", "CMPNEQ", "CMPLT", "CMPGT", "CMPLE",
         "CMPGE", "IFEQ", "NEQ", "IFLT", "IFGT", "IFLE", "IFGE",
-        /*"DIG",*/ /*"DUG",*/ "EMPTY_BIG_MAP", "APPLY", "CHAIN_ID"
+        /*"DIG",*/ /*"DUG",*/ "EMPTY_BIG_MAP", "APPLY", "CHAIN_ID", "KECCAK"
     ],
     macroCADR: macroCADRconst,
     macroDIP: macroDIPconst,
