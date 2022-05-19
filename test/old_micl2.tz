@@ -1,8 +1,0 @@
-parameter unit;
-storage string;
-code { CDR;
-       PUSH string "Hello ";
-       CONCAT;
-       NIL operation;
-       PAIR;
-     };
