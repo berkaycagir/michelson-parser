@@ -142,13 +142,13 @@ const expand_assert = (assert, annot, d) => {
         case "ASSERT_NEQ":
             return `[ { "prim": "NEQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_SOME":
-            return `[ { "prim": "IF_NONE", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ], "line": ${findLine(d)} } ]`;
+            return `{ "prim": "IF_NONE", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ], "line": ${findLine(d)} }`;
         case "ASSERT_NONE":
-            return `[ { "prim": "IF_NONE", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `{ "prim": "IF_NONE", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} }`;
         case "ASSERT_LEFT":
-            return `[ { "prim": "IF_LEFT", "args": [ [ { "prim": "RENAME" } ], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
+            return `{ "prim": "IF_LEFT", "args": [ [ { "prim": "RENAME" } ], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} }`;
         case "ASSERT_RIGHT":
-            return `[ { "prim": "IF_LEFT", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ], "line": ${findLine(d)} } ]`;
+            return `{ "prim": "IF_LEFT", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ], "line": ${findLine(d)} }`;
         default:
             return "";
     }
@@ -191,7 +191,7 @@ const expandIF = (ifInstr, ifTrue, ifFalse, annot, d) => {
         case "IFNEQ":
             return `[ { "prim": "NEQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [ ${ifTrue} ], [ ${ifFalse} ] ]${annotation}, "line": ${findLine(d)}} ]`;
         case "IF_SOME":
-            return `[ { "prim": "IF_NONE", "args": [ [ ${ifFalse} ], [ ${ifTrue} ] ]${annotation}, "line": ${findLine(d)}} ]`;
+            return `{ "prim": "IF_NONE", "args": [ [ ${ifFalse} ], [ ${ifTrue} ] ]${annotation}, "line": ${findLine(d)} }`;
         default:
             return "";
     }
