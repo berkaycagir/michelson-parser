@@ -223,35 +223,35 @@ const expand_assert = (assert, annot, d) => {
     const annotation = !!annot ? `, "annots": [ ${annot} ]` : "";
     switch (assert) {
         case "ASSERT":
-            return `[ { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPEQ":
-            return `[ [ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "EQ", "line": ${findLine(d)} } ], {"prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "EQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPGE":
-            return `[ [ { "prim":"COMPARE", "line": ${findLine(d)} }, { "prim": "GE", "line": ${findLine(d)} } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim":"COMPARE", "line": ${findLine(d)} }, { "prim": "GE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPGT":
-            return `[ [ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "GT", "line": ${findLine(d)} } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "GT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPLE":
-            return `[ [ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "LE", "line": ${findLine(d)} } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "LE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPLT":
-            return `[ [ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "LT", "line": ${findLine(d)} } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "LT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_CMPNEQ":
-            return `[ [ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "NEQ", "line": ${findLine(d)} } ], { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "COMPARE", "line": ${findLine(d)} }, { "prim": "NEQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_EQ":
-            return `[ { "prim": "EQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "EQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_GE":
-            return `[ { "prim": "GE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim":"FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "GE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim":"FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_GT":
-            return `[ { "prim": "GT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "GT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_LE":
-            return `[ { "prim": "LE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "LE", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_LT":
-            return `[ { "prim": "LT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "LT", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_NEQ":
-            return `[ { "prim": "NEQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} } ]`;
+            return `[ { "prim": "NEQ", "line": ${findLine(d)} }, { "prim": "IF", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} } ]`;
         case "ASSERT_SOME":
             return `{ "prim": "IF_NONE", "args": [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ], [ { "prim": "RENAME" } ] ], "line": ${findLine(d)} }`;
         case "ASSERT_NONE":
-            return `{ "prim": "IF_NONE", "args": [ [], [ [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ] ], "line": ${findLine(d)} }`;
+            return `{ "prim": "IF_NONE", "args": [ [], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} }`;
         case "ASSERT_LEFT":
             return `{ "prim": "IF_LEFT", "args": [ [ { "prim": "RENAME" } ], [ { "prim": "UNIT" }, { "prim": "FAILWITH" ${annotation} } ] ], "line": ${findLine(d)} }`;
         case "ASSERT_RIGHT":
